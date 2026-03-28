@@ -1,35 +1,17 @@
 /**
  * FlowsPage — Full flows table with filter controls.
+ * Uses global real-time DPIContext.
  */
 
-import { useState, useEffect } from "react";
-import { fetchFlows } from "../api";
+import { useState } from "react";
+import { useDPI } from "../context/DPIContext";
 import FlowsTable from "../components/FlowsTable";
 
 const FILTERS = ["All", "Allowed", "Blocked"];
 
 export default function FlowsPage() {
-    const [flows, setFlows] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { flows, loading } = useDPI();
     const [activeFilter, setActiveFilter] = useState("All");
-
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const params = {};
-                if (activeFilter === "Blocked") params.blocked = true;
-                if (activeFilter === "Allowed") params.blocked = false;
-
-                const res = await fetchFlows(params);
-                setFlows(res.flows);
-            } catch (err) {
-                console.error("Failed to fetch flows:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
-    }, [activeFilter]);
 
     if (loading) {
         return (
@@ -39,6 +21,12 @@ export default function FlowsPage() {
             </div>
         );
     }
+
+    const filteredFlows = flows.filter(f => {
+        if (activeFilter === "Blocked") return f.blocked === true;
+        if (activeFilter === "Allowed") return f.blocked === false;
+        return true;
+    });
 
     return (
         <>
@@ -52,17 +40,14 @@ export default function FlowsPage() {
                     <button
                         key={f}
                         className={`filter-btn${activeFilter === f ? " active" : ""}`}
-                        onClick={() => {
-                            setLoading(true);
-                            setActiveFilter(f);
-                        }}
+                        onClick={() => setActiveFilter(f)}
                     >
                         {f}
                     </button>
                 ))}
             </div>
 
-            <FlowsTable flows={flows} />
+            <FlowsTable flows={filteredFlows} />
         </>
     );
 }

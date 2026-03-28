@@ -6,7 +6,7 @@ Bridge between C++ packet analyzer and the frontend dashboard.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import stats, flows, sni
+from routes import stats, flows, sni, ws
 
 app = FastAPI(
     title="PacketPulse DPI API",
@@ -31,6 +31,7 @@ app.add_middleware(
 app.include_router(stats.router, prefix="/stats", tags=["Stats"])
 app.include_router(flows.router, prefix="/flows", tags=["Flows"])
 app.include_router(sni.router,   prefix="/sni",   tags=["SNI"])
+app.include_router(ws.router,    prefix="/ws",    tags=["WebSockets"])
 
 
 @app.get("/", tags=["Health"])

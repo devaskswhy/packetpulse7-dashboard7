@@ -1,10 +1,9 @@
 /**
  * DashboardPage — Overview with stat cards, charts, and recent flows.
- * Fetches from /stats, /flows, and /sni on mount.
+ * Uses global real-time DPIContext.
  */
 
-import { useState, useEffect } from "react";
-import { fetchStats, fetchFlows, fetchSNI } from "../api";
+import { useDPI } from "../context/DPIContext";
 
 import StatsCards from "../components/StatsCards";
 import TrafficChart from "../components/TrafficChart";
@@ -13,31 +12,7 @@ import FlowsTable from "../components/FlowsTable";
 import DomainTable from "../components/DomainTable";
 
 export default function DashboardPage() {
-    const [stats, setStats] = useState(null);
-    const [flows, setFlows] = useState([]);
-    const [domains, setDomains] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    const loadData = async () => {
-        try {
-            const [statsRes, flowsRes, sniRes] = await Promise.all([
-                fetchStats(),
-                fetchFlows(),
-                fetchSNI(),
-            ]);
-            setStats(statsRes.stats);
-            setFlows(flowsRes.flows);
-            setDomains(sniRes.domains);
-        } catch (err) {
-            console.error("Failed to fetch dashboard data:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadData();
-    }, []);
+    const { stats, flows, domains, loading } = useDPI();
 
     if (loading) {
         return (

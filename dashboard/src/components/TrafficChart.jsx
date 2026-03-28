@@ -1,8 +1,9 @@
 /**
  * TrafficChart — Area chart showing protocol-level traffic breakdown.
- * Uses Recharts composable API for a polished, animated chart.
+ * Uses real-time WebSocket deltas for smooth scrolling.
  */
 
+import { useState, useEffect, useRef } from "react";
 import {
     AreaChart,
     Area,
@@ -13,31 +14,6 @@ import {
     ResponsiveContainer,
     Legend,
 } from "recharts";
-
-/**
- * Generate mock time-series data from the aggregate stats.
- * In production this would come from a streaming endpoint.
- */
-function generateTimeSeries(stats) {
-    if (!stats) return [];
-
-    const points = 24;
-    const data = [];
-    const now = Date.now();
-
-    for (let i = 0; i < points; i++) {
-        const t = new Date(now - (points - 1 - i) * 300_000); // 5-min intervals
-        const jitter = () => 0.7 + Math.random() * 0.6;
-
-        data.push({
-            time: t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            TCP: Math.round((stats.protocols.tcp / points) * jitter()),
-            UDP: Math.round((stats.protocols.udp / points) * jitter()),
-            Other: Math.round((stats.protocols.other / points) * jitter()),
-        });
-    }
-    return data;
-}
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -66,7 +42,7 @@ const CustomTooltip = ({ active, payload, label }) => {
                 >
                     <span>{p.dataKey}</span>
                     <span style={{ fontWeight: 600 }}>
-                        {p.value.toLocaleString()}
+                        {p.value.toLocaleString()} pkt/s
                     </span>
                 </div>
             ))}
@@ -75,15 +51,60 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function TrafficChart({ stats }) {
-    const data = generateTimeSeries(stats);
+    const [data, setData] = useState(() => {
+        // Init 30 empty points
+        const pts = [];
+        const now = Date.now();
+        for (let i = 0; i < 30; i++) {
+            pts.push({
+                time: new Date(now - (30 - 1 - i) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                TCP: 0,
+                UDP: 0,
+                Other: 0,
+            });
+        }
+        return pts;
+    });
+
+    const prevStatsRef = useRef(null);
+
+    useEffect(() => {
+        if (!stats) return;
+
+        if (!prevStatsRef.current) {
+            prevStatsRef.current = stats;
+            return;
+        }
+
+        const prev = prevStatsRef.current;
+        const dpTCP = stats.protocols.tcp - prev.protocols.tcp;
+        const dpUDP = stats.protocols.udp - prev.protocols.udp;
+        const dpOther = stats.protocols.other - prev.protocols.other;
+
+        const now = new Date();
+        const newPoint = {
+            time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            TCP: dpTCP > 0 ? dpTCP : 0,
+            UDP: dpUDP > 0 ? dpUDP : 0,
+            Other: dpOther > 0 ? dpOther : 0,
+        };
+
+        setData(prevData => {
+            const next = [...prevData, newPoint];
+            if (next.length > 30) next.shift(); // keep sliding window of 30 pts
+            return next;
+        });
+
+        prevStatsRef.current = stats;
+    }, [stats]);
 
     return (
         <div className="chart-panel" style={{ gridColumn: "span 1" }}>
             <div className="panel-header">
                 <div>
-                    <div className="panel-title">Traffic Volume</div>
+                    <div className="panel-title">Live Traffic Volume</div>
                     <div className="panel-subtitle">
-                        Protocol breakdown · 5-min intervals
+                        Protocol bandwidth · 1-sec real-time deltas
                     </div>
                 </div>
             </div>
@@ -113,13 +134,14 @@ export default function TrafficChart({ stats }) {
                         tick={{ fill: "#64748b", fontSize: 11 }}
                         axisLine={{ stroke: "#1e293b" }}
                         tickLine={false}
+                        minTickGap={20}
                     />
                     <YAxis
                         tick={{ fill: "#64748b", fontSize: 11 }}
                         axisLine={false}
                         tickLine={false}
                         tickFormatter={(v) =>
-                            v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v
+                            v >= 1000 ? `${(v / 1000).toFixed(1)}K` : v
                         }
                     />
                     <Tooltip content={<CustomTooltip />} />
@@ -134,7 +156,7 @@ export default function TrafficChart({ stats }) {
                         stroke="#60a5fa"
                         strokeWidth={2}
                         fill="url(#gradTCP)"
-                        animationDuration={1200}
+                        isAnimationActive={false}
                     />
                     <Area
                         type="monotone"
@@ -142,7 +164,7 @@ export default function TrafficChart({ stats }) {
                         stroke="#a78bfa"
                         strokeWidth={2}
                         fill="url(#gradUDP)"
-                        animationDuration={1400}
+                        isAnimationActive={false}
                     />
                     <Area
                         type="monotone"
@@ -150,7 +172,7 @@ export default function TrafficChart({ stats }) {
                         stroke="#22d3ee"
                         strokeWidth={2}
                         fill="url(#gradOther)"
-                        animationDuration={1600}
+                        isAnimationActive={false}
                     />
                 </AreaChart>
             </ResponsiveContainer>
