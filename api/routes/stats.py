@@ -1,18 +1,19 @@
 """
 GET /stats — Packet capture statistics.
 
-Returns aggregate counters that mirror the C++ engine's
-ConnectionTracker::getGlobalStats() output.
+Reads from the C++ engine's output.json when available,
+otherwise serves built-in mock data so the API is always usable.
 """
 
 from fastapi import APIRouter
 
 from models.stats import StatsResponse, PacketStats, ProtocolBreakdown
+from data_loader import load_stats
 
 router = APIRouter()
 
 # ---------------------------------------------------------------------------
-# Mock data — will be replaced by C++ engine bridge / Redis cache
+# Fallback mock data (used when output.json is absent)
 # ---------------------------------------------------------------------------
 MOCK_STATS = PacketStats(
     total_packets=584_213,
@@ -32,4 +33,17 @@ MOCK_STATS = PacketStats(
     description="Returns aggregate packet statistics from the DPI engine.",
 )
 async def get_stats():
+    real = load_stats()
+    if real is not None:
+        stats = PacketStats(
+            total_packets=real["total_packets"],
+            total_bytes=real["total_bytes"],
+            active_flows=real["active_flows"],
+            blocked_packets=real["blocked_packets"],
+            protocols=ProtocolBreakdown(**real["protocols"]),
+            capture_duration_sec=real["capture_duration_sec"],
+            packets_per_sec=real["packets_per_sec"],
+        )
+        return StatsResponse(stats=stats)
+
     return StatsResponse(stats=MOCK_STATS)

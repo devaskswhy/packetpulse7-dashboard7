@@ -6,11 +6,13 @@
 #include <iomanip>
 #include <unordered_set>
 #include <algorithm>
+#include <chrono>
 
 #include "pcap_reader.h"
 #include "packet_parser.h"
 #include "sni_extractor.h"
 #include "types.h"
+#include "json_exporter.h"
 
 using namespace PacketAnalyzer;
 using namespace DPI;
@@ -24,6 +26,8 @@ struct Flow {
     uint64_t packets = 0;
     uint64_t bytes = 0;
     bool blocked = false;
+    uint64_t tcp_packets = 0;
+    uint64_t udp_packets = 0;
 };
 
 class BlockingRules {
@@ -91,9 +95,10 @@ Options:
   --block-ip <ip>        Block traffic from source IP
   --block-app <app>      Block application (YouTube, Facebook, etc.)
   --block-domain <dom>   Block domain (substring match)
+  --json <path>          Export results as JSON (default: output.json)
 
 Example:
-  )" << prog << R"( capture.pcap filtered.pcap --block-app YouTube --block-ip 192.168.1.50
+  )" << prog << R"( capture.pcap filtered.pcap --block-app YouTube --json output.json
 )";
 }
 
@@ -109,6 +114,8 @@ int main(int argc, char* argv[]) {
     std::string output_file = argv[2];
 
     BlockingRules rules;
+    std::string json_output_path = "output.json";   // default
+    bool export_json = false;
 
     // Parse options
     for (int i = 3; i < argc; i++) {
@@ -119,6 +126,11 @@ int main(int argc, char* argv[]) {
             rules.blockApp(argv[++i]);
         } else if (arg == "--block-domain" && i + 1 < argc) {
             rules.blockDomain(argv[++i]);
+        } else if (arg == "--json") {
+            export_json = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                json_output_path = argv[++i];
+            }
         }
     }
 
@@ -147,19 +159,28 @@ int main(int argc, char* argv[]) {
     std::unordered_map<FiveTuple, Flow, FiveTupleHash> flows;
 
     uint64_t total_packets = 0;
+    uint64_t total_bytes = 0;
     uint64_t forwarded = 0;
     uint64_t dropped = 0;
+    uint64_t tcp_packets = 0;
+    uint64_t udp_packets = 0;
+    uint64_t other_packets = 0;
     std::unordered_map<AppType, uint64_t> app_stats;
 
     RawPacket raw;
     ParsedPacket parsed;
 
+    auto start_time = std::chrono::steady_clock::now();
     std::cout << "[DPI] Processing packets...\n";
 
     while (reader.readNextPacket(raw)) {
         total_packets++;
+        total_bytes += raw.data.size();
 
-        if (!PacketParser::parse(raw, parsed)) continue;
+        if (!PacketParser::parse(raw, parsed)) {
+            other_packets++;
+            continue;
+        }
         if (!parsed.has_ip || (!parsed.has_tcp && !parsed.has_udp)) continue;
 
         // Create five-tuple
@@ -192,6 +213,17 @@ int main(int argc, char* argv[]) {
         }
         flow.packets++;
         flow.bytes += raw.data.size();
+
+        // Track protocol stats
+        if (parsed.protocol == 6) {
+            tcp_packets++;
+            flow.tcp_packets++;
+        } else if (parsed.protocol == 17) {
+            udp_packets++;
+            flow.udp_packets++;
+        } else {
+            other_packets++;
+        }
 
         // Try SNI extraction - even for flows already marked as generic HTTPS
         if ((flow.app_type == AppType::UNKNOWN || flow.app_type == AppType::HTTPS) &&
@@ -285,6 +317,10 @@ int main(int argc, char* argv[]) {
     reader.close();
     output.close();
 
+    auto end_time = std::chrono::steady_clock::now();
+    double duration_sec = std::chrono::duration<double>(end_time - start_time).count();
+    double pps = (duration_sec > 0) ? total_packets / duration_sec : 0;
+
     std::cout << "\n";
     std::cout << "╔══════════════════════════════════════════════════════════════╗\n";
     std::cout << "║                      PROCESSING REPORT                       ║\n";
@@ -326,6 +362,61 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "\nOutput written to: " << output_file << "\n";
+
+    // ---- JSON Export ----
+    if (export_json) {
+        // Build stats
+        DPI::StatsExport stats_exp{};
+        stats_exp.total_packets       = total_packets;
+        stats_exp.total_bytes         = total_bytes;
+        stats_exp.active_flows        = flows.size();
+        stats_exp.blocked_packets     = dropped;
+        stats_exp.tcp_packets         = tcp_packets;
+        stats_exp.udp_packets         = udp_packets;
+        stats_exp.other_packets       = other_packets;
+        stats_exp.capture_duration_sec = duration_sec;
+        stats_exp.packets_per_sec     = pps;
+
+        // Build flows
+        std::vector<DPI::FlowExport> flow_exports;
+        flow_exports.reserve(flows.size());
+        for (const auto& [tuple, flow] : flows) {
+            DPI::FlowExport fe{};
+            fe.src_ip   = tuple.src_ip;
+            fe.dst_ip   = tuple.dst_ip;
+            fe.src_port = tuple.src_port;
+            fe.dst_port = tuple.dst_port;
+            fe.protocol = tuple.protocol;
+            fe.app_type = flow.app_type;
+            fe.packets  = flow.packets;
+            fe.bytes    = flow.bytes;
+            fe.blocked  = flow.blocked;
+            flow_exports.push_back(fe);
+        }
+
+        // Build domains — aggregate by SNI
+        struct DomAgg { AppType app; uint64_t flow_count; uint64_t total_bytes; bool blocked; };
+        std::unordered_map<std::string, DomAgg> dom_map;
+        for (const auto& [tuple, flow] : flows) {
+            if (flow.sni.empty()) continue;
+            auto& d = dom_map[flow.sni];
+            d.app = flow.app_type;
+            d.flow_count++;
+            d.total_bytes += flow.bytes;
+            if (flow.blocked) d.blocked = true;
+        }
+        std::vector<DPI::DomainExport> domain_exports;
+        domain_exports.reserve(dom_map.size());
+        for (const auto& [domain, agg] : dom_map) {
+            domain_exports.push_back({domain, agg.app, agg.flow_count, agg.total_bytes, agg.blocked});
+        }
+
+        if (DPI::exportToJSON(json_output_path, stats_exp, flow_exports, domain_exports)) {
+            std::cout << "[JSON] Exported analysis results to: " << json_output_path << "\n";
+        } else {
+            std::cerr << "[JSON] ERROR: Failed to write " << json_output_path << "\n";
+        }
+    }
 
     return 0;
 }
