@@ -1,84 +1,105 @@
-## Deep Packet Inspection Engine
+# PacketPulse DPI System
 
-High‑performance deep packet inspection (DPI) engine for offline PCAP analysis.  
-It parses Ethernet/IP/TCP/UDP traffic, extracts TLS SNI / HTTP hostnames, classifies
-flows by application, and applies flexible blocking rules to produce a filtered PCAP.
+A high‑performance deep packet inspection (DPI) engine coupled with a modern, real-time React dashboard and FastAPI backend. 
+
+This unified ecosystem parses Ethernet/IP/TCP/UDP traffic, extracts TLS SNI / HTTP hostnames, classifies flows by application, applies flexible blocking rules, and streams analytics in real-time to a beautiful web UI.
 
 ---
 
-### Features
+## 🚀 The Unified Full-Stack Ecosystem
 
-- **Offline PCAP processing**: Read standard `.pcap` captures from Wireshark, tcpdump, etc.
-- **Protocol parsing**: Ethernet, IPv4, TCP, UDP parsing with timestamp and payload extraction.
+PacketPulse has evolved from a standalone C++ tool into a comprehensive observability platform:
+
+1. **C++ DPI Engine** (`/src` & `/include`): A high-speed packet analyzer that parses PCAPs, extracts five-tuples and SNIs, enforces blocking rules, and exports structured traffic JSON (`--json`).
+2. **FastAPI Backend** (`/api`): A highly concurrent Python REST API that reads the engine's JSON output and streams network statistics continuously via WebSockets (`ws://localhost:8000/ws/live`).
+3. **React Dashboard** (`/dashboard`): A premium, responsive frontend built with React, Vite, and Recharts. It connects to the global WebSocket context (`DPIContext.jsx`) to render buttery-smooth live traffic throughput, application distributions, and active network flow tables without manual polling.
+
+---
+
+## ⚡ Quick Start (Unified Launcher)
+
+You can launch the entire ecosystem (Engine, API, and Dashboard) using the single unified coordinator script.
+
+### Prerequisites
+- **Node.js**: For the React Dashboard (`npm`)
+- **Python 3.10+**: For FastAPI, Uvicorn, and Python scripts
+- **Compiled C++ engine**: See the Build section below. *(Note: If the binary is missing, `start.py` will intelligently inject a live simulated data generator so you can still demo the UI instantly!)*
+
+```bash
+# 1. Install frontend dependencies
+cd dashboard
+npm install
+cd ..
+
+# 2. Install backend dependencies
+cd api
+pip install fastapi uvicorn pydantic websockets
+cd ..
+
+# 3. Launch the unified suite
+python start.py
+```
+
+`start.py` will automatically launch the React client, FastAPI server, and gracefully terminate everything when you exit.
+- **Dashboard UI**: http://localhost:5173
+- **FastAPI / Swagger Docs**: http://localhost:8000/docs
+
+---
+
+## ⚙️ C++ Engine Features
+
+- **Offline PCAP processing**: Reads standard `.pcap` captures from Wireshark, tcpdump, etc.
 - **Deep inspection**:
   - TLS SNI extraction from ClientHello
   - HTTP `Host` header extraction for plaintext HTTP
   - Basic DNS query domain extraction
-- **Flow tracking**:
-  - Five‑tuple based connection tracking
-  - Per‑flow classification and statistics
 - **Rule‑based blocking**:
-  - Block by source IP, destination port, application, or domain (with wildcards)
-  - Flow‑level blocking: once a flow is marked blocked, all subsequent packets are dropped
-- **Multi‑threaded engine**:
-  - Reader → Load Balancers → Fast Path workers → Output writer
-  - Consistent hashing ensures all packets of a flow hit the same worker
-- **Multiple CLIs**:
-  - Packet summary viewer
-  - SNI inspector
-  - Single‑threaded DPI engine
-  - Multi‑threaded DPI engine
+  - Block by source IP, destination port, application, or domain (with wildcards).
+  - Flow‑level blocking: once a flow is marked blocked, all subsequent packets are dropped.
+- **JSON Exporting**: Added built-in dependency-free JSON serialization (`json_exporter.h`) to bridge system memory directly into the web application.
 
----
+### Building the Engine
 
-### Repository Structure
+You will need a C++17 compiler and **CMake 3.16+**. Windows users can see detailed compilation instructions in `WINDOWS_SETUP.md`.
 
-```text
-.
-├── CMakeLists.txt
-├── include/
-│   ├── dpi_engine.h          # Multi-threaded DPI orchestration
-│   ├── fast_path.h           # Fast Path worker threads
-│   ├── load_balancer.h       # Load balancer threads
-│   ├── connection_tracker.h  # Per-flow tracking and global stats
-│   ├── rule_manager.h        # Blocking rule management
-│   ├── types.h               # Core DPI types and enums
-│   ├── pcap_reader.h         # PCAP file reader
-│   ├── packet_parser.h       # Protocol parsing (Ethernet/IP/TCP/UDP)
-│   ├── sni_extractor.h       # TLS/HTTP/DNS inspectors
-│   ├── thread_safe_queue.h   # Generic thread-safe queue
-│   └── platform.h            # Platform helpers
-├── src/
-│   ├── cli/
-│   │   ├── packet_summary_main.cpp     # Human-friendly packet summary CLI
-│   │   ├── sni_inspector_main.cpp      # Simple SNI logger CLI
-│   │   ├── dpi_single_thread_main.cpp  # Single-threaded DPI engine CLI
-│   │   └── dpi_engine_main.cpp         # Multi-threaded DPI engine CLI
-│   ├── dpi_engine.cpp        # DPIEngine implementation (multi-threaded)
-│   ├── fast_path.cpp         # Fast Path workers (classification + blocking)
-│   ├── load_balancer.cpp     # Load balancers (distribute flows to workers)
-│   ├── connection_tracker.cpp# Per-FP and global connection tracking
-│   ├── rule_manager.cpp      # Rule evaluation and persistence
-│   ├── pcap_reader.cpp       # PCAP reader implementation
-│   ├── packet_parser.cpp     # Protocol parsing implementation
-│   ├── sni_extractor.cpp     # TLS SNI / HTTP Host / DNS extraction
-│   ├── types.cpp             # String helpers and SNI→AppType mapping
-│   └── dpi_mt.cpp            # Alternative multi-threaded DPI prototype
-├── generate_test_pcap.py     # Script to generate sample PCAPs
-├── WINDOWS_SETUP.md          # Windows-specific build instructions
-└── test_dpi.pcap             # Example capture (if present)
+```bash
+# Configure and build Release
+cmake -S . -B build
+cmake --build build --config Release
 ```
 
+Executables will be placed under the `build/` directory.
+
+### Running Engine CLIs Manually
+
+Assuming you built with the commands above and are in the project root:
+
+**Single-threaded DPI engine (with JSON export):**
+```bash
+./build/dpi_single_thread_cli input.pcap filtered.pcap \
+  --block-app YouTube \
+  --block-ip 192.168.1.50 \
+  --json output.json
+```
+
+**Multi-threaded DPI engine:**
+```bash
+./build/dpi_engine_cli input.pcap filtered.pcap \
+  --block-app YouTube \
+  --lbs 4 --fps 4
+```
+*(Use `--lbs` to control Load Balancer threads and `--fps` to control Fast Path workers).*
+
 ---
 
-### Architecture Overview
+## 🏗️ Architecture Overview
 
-At a high level, the engine turns an input PCAP into a filtered output PCAP:
+At a high level, the internal C++ engine turns an input PCAP into a filtered output PCAP and a rich data export:
 
 ```text
 Input PCAP ──► Parser & Classifier ──► Policy Engine ──► Output PCAP
                             │
-                            └── Statistics & Reports
+                            └── JSON Exporter ──► output.json ──► FastAPI WebSocket ──► React UI
 ```
 
 - **Core model (`types.*`)**
@@ -86,164 +107,46 @@ Input PCAP ──► Parser & Classifier ──► Policy Engine ──► Outpu
   - `Connection` tracks per-flow state, SNI/hostname, and counters.
   - `AppType` encodes application categories (YouTube, Facebook, DNS, …).
 
-- **Capture & parsing**
-  - `PcapReader` streams packets from disk and exposes timestamps + raw bytes.
-  - `PacketParser` decodes Ethernet/IP/TCP/UDP and exposes a `ParsedPacket` view.
+- **Multi-threaded Engine (`DPIEngine`)**
+  - **Load balancers** distribute incoming `PacketJob` instances to Fast Path workers using consistent hashing on the five-tuple.
+  - **Fast Path workers** inspect payloads (TLS/HTTP/DNS), classify flows, consult the `RuleManager`, and push allowed packets into the shared output queue.
 
-- **Inspection services**
-  - `SNIExtractor` extracts TLS SNI from ClientHello.
-  - `HTTPHostExtractor` extracts the HTTP `Host` header.
-  - `DNSExtractor` reads queried domains from DNS requests.
+---
 
-- **Flow tracking & rules**
-  - `ConnectionTracker` owns a per-worker hash map of active connections and
-    handles classification (`classifyConnection`) and blocking state.
-  - `RuleManager` centralizes all blocklists:
-    - Source IPs
-    - Ports
-    - Applications (`AppType`)
-    - Domains (exact and wildcard patterns like `*.example.com`)
-
-- **Multi-threaded engine (`DPIEngine`)**
+## 📁 Repository Structure
 
 ```text
-PCAP Reader
-    │
-    ├─ hash(five-tuple) → Load Balancer 0
-    └─ hash(five-tuple) → Load Balancer 1 ...
-             │
-             ├─ hash(five-tuple) → Fast Path 0
-             └─ hash(five-tuple) → Fast Path 1 ...
-                                      │
-                                      └─ Output Queue → Output Writer
-```
-
-- **Load balancers** distribute incoming `PacketJob` instances to Fast Path
-  workers using consistent hashing on the five-tuple.
-- **Fast Path workers**:
-  - own a `ConnectionTracker`
-  - inspect payloads (TLS/HTTP/DNS)
-  - classify flows and consult `RuleManager`
-  - push allowed packets into the shared output queue
-- **Output writer** drains the output queue and writes a valid PCAP with
-  the original global header and per-packet headers.
-
----
-
-### Provided CLIs
-
-- **`packet_summary_cli`**
-  - Single-file summary tool for exploring a PCAP.
-  - Displays per-packet Ethernet / IP / TCP / UDP headers and a small payload preview.
-
-- **`sni_inspector_cli`**
-  - Scans a capture and prints any TLS SNI found in HTTPS ClientHello packets.
-
-- **`dpi_single_thread_cli`**
-  - Straightforward, single-threaded DPI engine.
-  - Good for understanding end-to-end logic before looking at the threaded version.
-
-- **`dpi_engine_cli`**
-  - Production-style multi-threaded DPI based on `DPIEngine`.
-  - Supports the full rule set, per-app statistics, and connection-level reporting.
-
----
-
-### Building
-
-#### Requirements
-
-- A C++17 compiler:
-  - **Linux / WSL**: `g++` or `clang++`
-  - **macOS**: Xcode command line tools or Homebrew `gcc`/`llvm`
-  - **Windows**: MSVC (Visual Studio) or MinGW‑w64
-- **CMake 3.16+**
-
-#### Configure & build (recommended)
-
-```bash
-cmake -S . -B build
-cmake --build build --config Release
-```
-
-Executables will be placed under `build/` (or `build/Release` on some generators).
-
----
-
-### Running the tools
-
-Assuming you built with the commands above and are in the project root:
-
-#### Packet summary
-
-```bash
-./build/packet_summary_cli input.pcap
-./build/packet_summary_cli input.pcap 10    # limit to first 10 packets
-```
-
-#### SNI inspector
-
-```bash
-./build/sni_inspector_cli input.pcap
-```
-
-#### Single-threaded DPI engine
-
-```bash
-./build/dpi_single_thread_cli input.pcap filtered.pcap \
-  --block-app YouTube \
-  --block-ip 192.168.1.50 \
-  --block-domain facebook
-```
-
-#### Multi-threaded DPI engine
-
-```bash
-./build/dpi_engine_cli input.pcap filtered.pcap \
-  --block-app YouTube \
-  --block-domain *.tiktok.com \
-  --block-ip 192.168.1.50 \
-  --lbs 4 --fps 4
-```
-
-- `--lbs` controls the number of load balancer threads.
-- `--fps` controls the number of Fast Path workers per load balancer.
-
----
-
-### Windows notes
-
-On Windows, you can:
-
-- Use **Visual Studio** to open the folder as a CMake project and build the
-  `packet_summary_cli`, `sni_inspector_cli`, `dpi_single_thread_cli`, and
-  `dpi_engine_cli` targets.
-- Or follow `WINDOWS_SETUP.md` for detailed MSVC / MinGW / WSL instructions.
-
-When running from PowerShell or `cmd`, remember:
-
-```powershell
-build\Release\dpi_engine_cli.exe input.pcap output.pcap --block-app YouTube
+.
+├── start.py                  # UNIFIED LAUNCHER: Spawns API, Dashboard, and Engine
+├── api/                      # FASTAPI BACKEND
+│   ├── main.py               # Uvicorn entrypoint and core server
+│   ├── data_loader.py        # Connects FastAPI to the C++ JSON output
+│   └── routes/               # REST handlers and WebSocket streaming endpoints
+├── dashboard/                # REACT FRONTEND
+│   ├── src/context/          # WebSockets state management (DPIContext)
+│   ├── src/components/       # Recharts, UI visualizers, Flow Tables
+│   └── src/pages/            # Dashboard mode layouts
+├── include/                  # C++ ENGINE HEADERS
+│   ├── json_exporter.h       # Bridging serialization logic
+│   ├── dpi_engine.h          # Multi-threaded DPI orchestration
+│   └── ...                   
+├── src/                      # C++ ENGINE IMPLEMENTATION
+│   ├── cli/                  # Executable entrypoints (single & multi thread)
+│   └── ...                   
+├── generate_test_pcap.py     # Script to generate sample PCAPs for testing
+└── WINDOWS_SETUP.md          # Windows-specific C++ build instructions
 ```
 
 ---
 
-### Extending the engine
+## 🛠 Extending the Platform
 
-- **Add more application signatures**:
-  - Extend `sniToAppType` in `types.cpp` with additional SNI / hostname patterns.
-- **Custom rule sets**:
-  - Use `RuleManager::saveRules` / `loadRules` via the DPI engine APIs.
-  - Persist IP / app / domain / port rules across runs.
-- **Additional protocols**:
-  - Extend `PacketParser` and `SNIExtractor` to recognize new protocols or
-    QUIC/HTTP3 variants.
+- **Analytics Dashboard**: Add new Recharts components to `dashboard/src/components/` and pull expanded logic directly from `useDPI()` Context WebSocket.
+- **Add App Signatures**: Extend `sniToAppType` in `src/types.cpp` with additional SNI patterns.
+- **Custom Rule Sets**: Use `RuleManager::saveRules` / `loadRules` via the DPI engine APIs to persist IP / app / domain / port rules across runs.
 
 ---
 
-### License & contribution
+### License & Contribution
 
-This project is intended as a reference DPI implementation and a learning tool
-for multi-threaded packet processing. You can experiment with new heuristics,
-applications, and statistics by building on the existing engine and CLIs.
-
+This project serves as a complete high‑performance observation suite, a reference DPI implementation, and a robust learning tool for full-stack engineering. You can experiment with new heuristics, React visualizations, and WebSockets by building on the existing architecture.
