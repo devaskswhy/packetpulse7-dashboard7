@@ -88,11 +88,19 @@ def main():
         # Run it via Popen so it operates in parallel.
         # It's a PCAP processor, so it will exit when done, but the backend's websocket 
         # auto-generator handles continuous simulated pushing when parsing finishes
-        engine_proc = subprocess.Popen(
-            cmd,
-            stdout=sys.stdout,
-            stderr=sys.stderr
-        )
+        try:
+            engine_proc = subprocess.Popen(
+                cmd,
+                stdout=sys.stdout,
+                stderr=sys.stderr
+            )
+        except OSError as e:
+            logger.warning(
+                f"Could not execute DPI engine ({e}). "
+                "This usually means the binary was compiled for a different OS (e.g. Windows .exe on Linux/WSL). "
+                "Falling back to simulated live data — the API and Dashboard will continue running normally."
+            )
+            engine_proc = None
     else:
         logger.warning(
             "C++ DPI Engine binary not found! Please compile it following WINDOWS_SETUP.md. "

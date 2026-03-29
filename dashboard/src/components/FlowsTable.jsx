@@ -90,8 +90,8 @@ export default function FlowsTable({ flows, compact = false }) {
                                 <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>
                                     {f.app}
                                 </td>
-                                <td>{f.packets.toLocaleString()}</td>
-                                <td>{formatBytes(f.bytes)}</td>
+                                <td>{(f.packets ?? 0).toLocaleString()}</td>
+                                <td>{formatBytes(f.bytes ?? 0)}</td>
                                 <td>
                                     <span
                                         className={`badge ${f.blocked ? "blocked" : "allowed"}`}
