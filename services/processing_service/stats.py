@@ -12,6 +12,7 @@ class StatsComputer:
     def __init__(self, tracker):
         self.tracker = tracker
         self.running = True
+        self._last_stats = None
         
         # Configure Kafka Producer
         self.producer = Producer({'bootstrap.servers': KAFKA_BROKERS})
@@ -60,6 +61,7 @@ class StatsComputer:
             "blocked_ratio": blocked_ratio,
             "top_apps": top_apps
         }
+        self._last_stats = stats_record.copy()
         
         self.producer.produce(
             OUT_TOPIC_STATS, 
@@ -77,3 +79,6 @@ class StatsComputer:
     def stop(self):
         self.running = False
         self.producer.flush()
+
+    def get_last_stats(self):
+        return self._last_stats

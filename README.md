@@ -35,6 +35,7 @@ built with C++, Python microservices, Apache Kafka, Redis, and a live React dash
 | Detection | Python 3.12 + scikit-learn | Rule engine + ML anomaly detection |
 | ML / Detection | scikit-learn IsolationForest | Unsupervised anomaly detection, DDoS patterns |
 | API Gateway | FastAPI + Uvicorn + WebSockets | REST API + real-time streaming |
+| Persistent DB | PostgreSQL 16 + SQLAlchemy | Long-term flow & alert storage |
 | Frontend | React + Vite + Recharts | Live dashboard |
 | Cache / Rate Limiter | Redis 7.2 | Active flow cache, rate limiting, stats TTL |
 | Orchestration | Docker Compose | Local development |
@@ -49,10 +50,11 @@ built with C++, Python microservices, Apache Kafka, Redis, and a live React dash
 ### Setup
 1. Clone repo
 2. cd into project
-3. docker compose up -d zookeeper kafka redis
+3. docker compose up -d zookeeper kafka redis postgres
 4. docker compose up -d kafka-init (wait 10s)
-5. python start.py
-6. Open http://localhost:5174
+5. cd services/db && alembic upgrade head && cd ../..
+6. python start.py
+7. Open http://localhost:5174
 
 ## 📁 Project Structure
 
@@ -79,7 +81,11 @@ Packet_analyzer-main/
 │   │   ├── rule_engine.py    # RuleEngine — IP/domain/port/rate blocking
 │   │   ├── ml_engine.py      # AnomalyDetector — IsolationForest
 │   │   └── models/           # Saved model: isolation_forest.pkl
-├── docker-compose.yml      # Kafka + Zookeeper + infra
+│   ├── db/                   # Shared database library
+│   │   ├── models.py         # SQLAlchemy 2.0 schema
+│   │   ├── crud.py           # Async DB operations
+│   │   └── migrations/       # Alembic version history
+├── docker-compose.yml      # Kafka + Zookeeper + Redis + Postgres
 ├── start.py               # Unified launcher
 └── kafka_consumer_debug.py # Debug consumer for raw_packets
 ```
@@ -202,11 +208,20 @@ curl http://localhost:8000/rules
 - ✅ Phase 4: Flow Tracking & Aggregation
 - ✅ Phase 5: Redis Caching & Rate Limiting
 - ✅ Phase 6: Intelligent Detection Engine (Rules + ML)
-- ⏳ Phase 7: PostgreSQL Database
-- ⏳ Phase 8: Production API
-- ⏳ Phase 9: Real-time UI
-- ⏳ Phase 10: Full Dockerization
-- ⏳ Phase 11: Kubernetes
+- ✅ Phase 7: PostgreSQL Persistent Storage
+- ⏳ Phase 8: Production API Integration
+- ⏳ Phase 9: Real-time UI Enhancements
+- ⏳ Phase 10: Full Multi-Stage Dockerization
+- ⏳ Phase 11: Kubernetes Deployment (Helm)
+- ⏳ Phase 12: Distributed Tracing & Monitoring (Prometheus/Grafana)
+- ⏳ Phase 13: CI/CD Pipeline (GitHub Actions)
+- ⏳ Phase 14: Mobile App (React Native)
+- ⏳ Phase 15: AI-Powered Remediation
+- ⏳ Phase 16: Cloud Native Deployment (AWS/GCP/Azure)
+- ⏳ Phase 17: Enterprise Security Compliance
+- ⏳ Phase 18: Performance Optimization & Scaling
+- ⏳ Phase 19: User Feedback & Iteration
+- ⏳ Phase 20: Final Project Review & Handover
 
 ## 🛠️ Development
 

@@ -12,6 +12,9 @@ from flow_tracker import FlowTracker
 from stats import StatsComputer
 import asyncio
 from cache import RedisCache
+from db.session import AsyncSessionLocal
+from db.crud import upsert_flows, insert_stats
+import datetime
 
 logger = setup_logger("processing_service")
 app = FastAPI(title="Processing Service Health")
@@ -41,21 +44,38 @@ class ProcessorService:
         if err is not None:
             logger.error(f"Message delivery failed: {err}")
 
-    def background_flusher(self, producer):
+    async def _db_upsert_flows(self, records):
+        if not records: return
+        async with AsyncSessionLocal() as session:
+            try:
+                # Convert ISO strings to datetime objects for SQLAlchemy
+                for rec in records:
+                    if isinstance(rec.get("first_seen"), str):
+                        rec["first_seen"] = datetime.datetime.fromisoformat(rec["first_seen"].replace("Z", "+00:00"))
+                    if isinstance(rec.get("last_seen"), str):
+                        rec["last_seen"] = datetime.datetime.fromisoformat(rec["last_seen"].replace("Z", "+00:00"))
+                await upsert_flows(session, records)
+            except Exception as e:
+                logger.error(f"DB Upsert Error: {e}")
+
+    def background_flusher(self, producer, loop):
         """Background thread running every 5s to flush stale flows."""
         logger.info(f"Background flusher started (topic: {OUT_TOPIC_FLOWS})")
         while self.running:
             time.sleep(FLUSH_INTERVAL_SEC)
             try:
                 stale_records = self.tracker.flush_stale()
-                for rec in stale_records:
-                    producer.produce(
-                        OUT_TOPIC_FLOWS,
-                        key=rec["flow_id"],
-                        value=json.dumps(rec),
-                        callback=self._delivery_report
-                    )
-                producer.poll(0)
+                if stale_records:
+                    for rec in stale_records:
+                        producer.produce(
+                            OUT_TOPIC_FLOWS,
+                            key=rec["flow_id"],
+                            value=json.dumps(rec),
+                            callback=self._delivery_report
+                        )
+                    producer.poll(0)
+                    # Persistent storage
+                    asyncio.run_coroutine_threadsafe(self._db_upsert_flows(stale_records), loop)
             except Exception as e:
                 logger.error(f"Background flush error: {e}")
 
@@ -76,13 +96,14 @@ class ProcessorService:
             return
 
         # Start background threads
-        threading.Thread(target=self.background_flusher, args=(producer,), daemon=True).start()
+        loop = asyncio.new_event_loop()
+        threading.Thread(target=self.background_flusher, args=(producer, loop), daemon=True).start()
         threading.Thread(target=self.stats_comp.run, daemon=True).start()
         
-        loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         self.cache = RedisCache()
         
+        last_db_stats_time = time.time()
         logger.info("Started main consumer loop.")
         try:
             while self.running:
@@ -102,6 +123,16 @@ class ProcessorService:
                         
                     # Commit offset asynchronously
                     consumer.commit(asynchronous=True)
+                    
+                    # Periodic DB stats (every 60s)
+                    if time.time() - last_db_stats_time > 60:
+                        stats = self.stats_comp.get_last_stats()
+                        if stats:
+                            async def save_stats(s):
+                                async with AsyncSessionLocal() as session:
+                                    await insert_stats(session, s)
+                            asyncio.run_coroutine_threadsafe(save_stats(stats), loop)
+                        last_db_stats_time = time.time()
                 except Exception as e:
                     logger.error(f"Error parsing raw packet log: {e}")
                     
@@ -113,13 +144,16 @@ class ProcessorService:
             
             logger.info("Flushing remaining flows...")
             remaining = self.tracker.flush_all()
-            for rec in remaining:
-                producer.produce(
-                    OUT_TOPIC_FLOWS,
-                    key=rec["flow_id"],
-                    value=json.dumps(rec),
-                    callback=self._delivery_report
-                )
+            if remaining:
+                for rec in remaining:
+                    producer.produce(
+                        OUT_TOPIC_FLOWS,
+                        key=rec["flow_id"],
+                        value=json.dumps(rec),
+                        callback=self._delivery_report
+                    )
+                # Ensure last flows are in DB too
+                loop.run_until_complete(self._db_upsert_flows(remaining))
             
             producer.flush()
             consumer.close()

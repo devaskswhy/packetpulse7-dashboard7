@@ -4,11 +4,13 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y librdkafka-dev gcc && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY services/detection_service/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY services/detection_service/ .
+COPY services/db/ ./db/
 
+ENV PYTHONPATH=/app
 ENV KAFKA_BOOTSTRAP_SERVERS="kafka:29092"
 ENV HEALTH_PORT="8003"
 

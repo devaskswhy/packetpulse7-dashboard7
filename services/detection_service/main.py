@@ -11,6 +11,8 @@ from rate_limiter import RateLimiter
 from rule_engine import RuleEngine
 from ml_engine import MLEngine
 from config import setup_logger, KAFKA_BROKERS, IN_TOPIC, OUT_TOPIC, REDIS_HOST, REDIS_PORT, HEALTH_PORT
+from db.session import AsyncSessionLocal
+from db.crud import insert_alert
 
 logger = setup_logger("detection_main")
 
@@ -84,6 +86,16 @@ def run_detector():
                         value=json.dumps(alert),
                         callback=delivery_report
                     )
+                    
+                    # Persistent storage
+                    async def save_alert(a):
+                        async with AsyncSessionLocal() as session:
+                            # Map RuleEngine fields to model fields if different
+                            # models.Alert expects: type, flow_id, src_ip, dst_ip, reason, severity, ts
+                            # rule_engine.py _create_alert: type, flow_id, src_ip, dst_ip, reason, severity, ts
+                            await insert_alert(session, a)
+                    loop.create_task(save_alert(alert.copy()))
+                    
                     logger.info(f"Generated alert: {alert.get('type', alert.get('alert_type'))} for {alert.get('flow_id', 'unknown')}")
                     
             except Exception as e:

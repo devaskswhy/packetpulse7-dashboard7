@@ -79,6 +79,27 @@ services:
     restart: unless-stopped
 
   # --------------------------------------------------------------------------
+  # PostgreSQL Database
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: packetpulse-postgres
+    environment:
+      POSTGRES_DB: packetpulse
+      POSTGRES_USER: pp
+      POSTGRES_PASSWORD: pp_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
   # Topic Initializer (one-shot)
   # --------------------------------------------------------------------------
   kafka-init:
@@ -148,10 +169,14 @@ services:
     restart: always
 
   processing_service:
-    build: ./services/processing_service
+    build:
+      context: .
+      dockerfile: services/processing_service/Dockerfile
     container_name: packetpulse-processing-service
     depends_on:
       kafka:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     ports:
       - "8002:8002"
@@ -160,10 +185,14 @@ services:
     restart: always
 
   detection_service:
-    build: ./services/detection_service
+    build:
+      context: .
+      dockerfile: services/detection_service/Dockerfile
     container_name: packetpulse-detection-service
     depends_on:
       kafka:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     ports:
       - "8003:8003"
@@ -172,10 +201,14 @@ services:
     restart: always
 
   api_gateway:
-    build: ./services/api_gateway
+    build:
+      context: .
+      dockerfile: services/api_gateway/Dockerfile
     container_name: packetpulse-api-gateway
     depends_on:
       kafka:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     ports:
       - "8000:8000"
@@ -187,3 +220,4 @@ volumes:
   zookeeper-data:
   zookeeper-log:
   kafka-data:
+  pgdata:
