@@ -10,6 +10,8 @@ import uvicorn
 from config import setup_logger, KAFKA_BROKERS, IN_TOPIC, OUT_TOPIC_FLOWS, HEALTH_PORT, FLUSH_INTERVAL_SEC
 from flow_tracker import FlowTracker
 from stats import StatsComputer
+import asyncio
+from cache import RedisCache
 
 logger = setup_logger("processing_service")
 app = FastAPI(title="Processing Service Health")
@@ -23,6 +25,7 @@ class ProcessorService:
         self.tracker = FlowTracker()
         self.stats_comp = StatsComputer(self.tracker)
         self.running = True
+        self.cache = None
         
         self.consumer_conf = {
             'bootstrap.servers': KAFKA_BROKERS,
@@ -76,6 +79,10 @@ class ProcessorService:
         threading.Thread(target=self.background_flusher, args=(producer,), daemon=True).start()
         threading.Thread(target=self.stats_comp.run, daemon=True).start()
         
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        self.cache = RedisCache()
+        
         logger.info("Started main consumer loop.")
         try:
             while self.running:
@@ -88,7 +95,11 @@ class ProcessorService:
                 
                 try:
                     pkt = json.loads(msg.value().decode('utf-8'))
-                    self.tracker.update(pkt)
+                    flow_id, flow_record = self.tracker.update(pkt)
+                    
+                    if self.cache:
+                        loop.run_until_complete(self.cache.store_flow(flow_id, flow_record))
+                        
                     # Commit offset asynchronously
                     consumer.commit(asynchronous=True)
                 except Exception as e:
@@ -112,6 +123,9 @@ class ProcessorService:
             
             producer.flush()
             consumer.close()
+            if self.cache:
+                loop.run_until_complete(self.cache.close())
+            loop.close()
             logger.info("Graceful shutdown complete.")
 
     def shutdown(self, signum, frame):

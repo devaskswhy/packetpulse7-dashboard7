@@ -60,6 +60,9 @@ class FlowTracker:
                 # Retain known sni/app
                 if sni: flow["sni"] = sni
                 if app != "unknown": flow["app"] = app
+            
+            # Return id and formatted flow for cache
+            return flow_id, self._format_output(flow)
                 
     def get_all_active_flows(self):
         """Returns a copy of active flows for stats computation."""

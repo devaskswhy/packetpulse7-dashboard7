@@ -8,6 +8,8 @@ import threading
 from confluent_kafka import Consumer, Producer
 from fastapi import FastAPI
 import uvicorn
+import asyncio
+from rate_limiter import RateLimiter
 
 # Custom JSON Formatter
 class JSONFormatter(logging.Formatter):
@@ -59,6 +61,12 @@ def run_detector():
         'bootstrap.servers': KAFKA_BROKERS
     }
     
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    redis_host = os.getenv("REDIS_HOST", "localhost")
+    redis_port = int(os.getenv("REDIS_PORT", "6379"))
+    
     while True:
         try:
             consumer = Consumer(consumer_conf)
@@ -69,6 +77,13 @@ def run_detector():
         except Exception as e:
             logger.error(f"Waiting for Kafka... {e}")
             time.sleep(2)
+
+    rate_limiter = RateLimiter(
+        redis_host=redis_host, 
+        redis_port=redis_port, 
+        producer=producer, 
+        alert_topic=OUT_TOPIC
+    )
 
     logger.info("Started detection loop")
     
@@ -99,16 +114,11 @@ def run_detector():
                         "timestamp": datetime.utcnow().isoformat() + "Z"
                     })
                 
-                # Rule 2: Rate limit (High PPS)
-                pps = total_pkts / duration if duration > 0 else total_pkts
-                if pps > RATE_LIMIT_PPS:
-                    alerts.append({
-                        "alert_type": "High_Packet_Rate",
-                        "severity": "HIGH",
-                        "message": f"High packet rate detected: {pps:.1f} pps (Threshold {RATE_LIMIT_PPS})",
-                        "flow_id": flow.get("flow_id", "unknown"),
-                        "timestamp": datetime.utcnow().isoformat() + "Z"
-                    })
+                # Rule 2: Rate limit via Redis
+                # Check SRC ip
+                loop.run_until_complete(rate_limiter.is_rate_limited(src, window_s=60, max_packets=1000))
+                # Check DST ip (optional but thorough)
+                loop.run_until_complete(rate_limiter.is_rate_limited(dst, window_s=60, max_packets=1000))
                 
                 for alert in alerts:
                     producer.produce(
@@ -128,6 +138,8 @@ def run_detector():
     finally:
         consumer.close()
         producer.flush()
+        loop.run_until_complete(rate_limiter.close())
+        loop.close()
 
 if __name__ == "__main__":
     t = threading.Thread(target=run_detector, daemon=True)
