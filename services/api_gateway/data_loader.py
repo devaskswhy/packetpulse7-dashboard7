@@ -2,10 +2,11 @@ import os
 import json
 import logging
 import asyncio
-from typing import Dict, Any, List
+import random
+import hashlib
+from typing import Dict, Any
 from collections import deque
 from datetime import datetime
-from confluent_kafka import Consumer
 
 # Custom JSON Formatter
 class JSONFormatter(logging.Formatter):
@@ -30,6 +31,60 @@ logger.propagate = False
 
 KAFKA_BROKERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
+# ---------------------------------------------------------------------------
+# Simulated Data Generator
+# ---------------------------------------------------------------------------
+SIM_APPS = ["YouTube", "Netflix", "Facebook", "Instagram", "TikTok", "Reddit", "DNS", "Spotify", "GitHub", "Cloudflare"]
+SIM_PROTOS = ["TCP", "UDP"]
+SIM_SNIS = ["googlevideo.com", "nflxvideo.net", "fbcdn.net", "cdninstagram.com", "tiktokv.com", "reddit.com", "dns.google", "audio-ak.spotify.com", "github.com", "cloudflare.com"]
+SIM_SRC_IPS = [f"192.168.1.{i}" for i in range(10, 60)]
+SIM_DST_IPS = ["142.250.183.78", "151.101.1.140", "104.16.85.20", "52.94.236.248", "31.13.65.36", "23.210.112.44", "198.41.215.162", "13.107.42.14"]
+
+def _generate_flow():
+    """Generate a single realistic simulated flow."""
+    app_idx = random.randint(0, len(SIM_APPS) - 1)
+    src_ip = random.choice(SIM_SRC_IPS)
+    dst_ip = random.choice(SIM_DST_IPS)
+    src_port = random.randint(49152, 65535)
+    dst_port = random.choice([443, 80, 53, 8080, 8443, 993, 587])
+    proto = "UDP" if dst_port == 53 else "TCP"
+    
+    five_tuple = f"{src_ip}-{dst_ip}-{src_port}-{dst_port}-{proto}"
+    flow_id = hashlib.md5(five_tuple.encode()).hexdigest()[:16]
+    
+    return {
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "src_port": src_port,
+        "dst_port": dst_port,
+        "protocol": proto,
+        "app": SIM_APPS[app_idx],
+        "sni": SIM_SNIS[app_idx],
+        "bytes": random.randint(1024, 25_000_000),
+        "blocked": random.random() < 0.08,
+        "flow_id": flow_id
+    }
+
+def _generate_alert():
+    """Generate a simulated alert."""
+    alert_types = [
+        ("blocked", "Blocked by App Policy (TikTok)"),
+        ("blocked", "Connection to known blocked IP: 10.0.0.99"),
+        ("anomaly", "High UDP port scanning behavior"),
+        ("anomaly", "Anomalous traffic pattern detected (IsolationForest)"),
+        ("blocked", "SNI matched blocked pattern: *.malware.com"),
+        ("anomaly", "Rate limit exceeded: 1200 pps from single IP"),
+    ]
+    t, reason = random.choice(alert_types)
+    return {
+        "type": t,
+        "ip": random.choice(SIM_SRC_IPS),
+        "reason": reason,
+        "ts": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+
+
 class DataLoader:
     def __init__(self):
         self.flows = deque(maxlen=1000)
@@ -40,7 +95,7 @@ class DataLoader:
             "blocked_count": 0,
             "top_apps": {"Unknown": 0}
         }
-        self._source = "kafka"
+        self._source = "initializing"
 
     def get_data(self) -> Dict[str, Any]:
         """Returns the current state."""
@@ -54,38 +109,59 @@ class DataLoader:
         return self._source
 
     async def poll_loop(self):
-        """Background asyncio task to poll Kafka topics using confluent_kafka."""
-        logger.info(f"Starting Kafka consumer loop on brokers: {KAFKA_BROKERS}")
+        """Try Kafka first, fall back to simulated data if Kafka unavailable."""
+        kafka_ok = await self._try_kafka()
         
-        loop = asyncio.get_running_loop()
+        if not kafka_ok:
+            logger.info("Kafka unavailable — switching to simulated data generator")
+            self._source = "simulated"
+            await self._simulate_loop()
+
+    async def _try_kafka(self) -> bool:
+        """Attempt to connect to Kafka. Returns True if consuming, False if failed."""
+        try:
+            from confluent_kafka import Consumer
+        except ImportError:
+            logger.warning("confluent_kafka not installed – skipping Kafka consumer")
+            return False
+            
+        logger.info(f"Attempting Kafka connection on: {KAFKA_BROKERS}")
         
         consumer_conf = {
             'bootstrap.servers': KAFKA_BROKERS,
             'group.id': 'api_gateway',
             'auto.offset.reset': 'latest',
-            'enable.auto.commit': True
+            'enable.auto.commit': True,
+            'session.timeout.ms': 6000,
+            'socket.timeout.ms': 3000,
         }
         
-        consumer = Consumer(consumer_conf)
+        loop = asyncio.get_running_loop()
         
-        # We need to retry connection inside the async loop
-        while True:
+        # Give Kafka 5 seconds to connect, then give up
+        for attempt in range(3):
             try:
-                # We use run_in_executor to not block the asyncio event loop
+                consumer = Consumer(consumer_conf)
                 await loop.run_in_executor(None, consumer.subscribe, ["processed_packets", "alerts"])
-                logger.info("Successfully subscribed to processed_packets and alerts")
-                break
-            except Exception as e:
-                logger.error(f"Kafka connection error: {e}")
-                await asyncio.sleep(2.0)
+                logger.info("Successfully connected to Kafka — consuming live data")
+                self._source = "kafka"
                 
+                # Run Kafka consumer loop
+                await self._kafka_loop(consumer, loop)
+                return True
+            except Exception as e:
+                logger.warning(f"Kafka attempt {attempt + 1}/3 failed: {e}")
+                await asyncio.sleep(2.0)
+        
+        return False
+    
+    async def _kafka_loop(self, consumer, loop):
+        """Consume from Kafka topics."""
         try:
             while True:
-                # Use a small timeout to yield back to event loop if needed
                 msg = await loop.run_in_executor(None, consumer.poll, 0.1)
                 
                 if msg is None:
-                    # Give control back to event loop
                     await asyncio.sleep(0.01)
                     continue
                 if msg.error():
@@ -97,37 +173,34 @@ class DataLoader:
                     data = json.loads(msg.value().decode('utf-8'))
                     
                     if topic == "processed_packets":
-                        # Convert Processing_Service output to API FlowObj
-                        # Expected Processing keys: 
-                        # flow_id, src_ip, dst_ip, src_port, dst_port, protocol, bytes_fw, bytes_bw, packets_fw, timestamp
                         flow_obj = {
-                            "timestamp": data.get("timestamp", ""),
+                            "timestamp": data.get("timestamp", data.get("last_seen", "")),
                             "src_ip": data.get("src_ip", ""),
                             "dst_ip": data.get("dst_ip", ""),
                             "src_port": data.get("src_port", 0),
                             "dst_port": data.get("dst_port", 0),
                             "protocol": data.get("protocol", ""),
-                            "app": "Unknown",
-                            "sni": None,
-                            "bytes": data.get("bytes_fw", 0) + data.get("bytes_bw", 0),
-                            "blocked": False, # Will be set by alerts if needed, but keeping False default
+                            "app": data.get("app", "Unknown"),
+                            "sni": data.get("sni"),
+                            "bytes": data.get("bytes", data.get("bytes_fw", 0) + data.get("bytes_bw", 0)),
+                            "blocked": data.get("blocked", False),
                             "flow_id": data.get("flow_id", "")
                         }
                         
                         self.flows.appendleft(flow_obj)
-                        
-                        # Update stats
                         self.stats["total_bytes"] += flow_obj["bytes"]
-                        self.stats["total_packets"] += data.get("packets_fw", 0) + data.get("packets_bw", 0)
+                        self.stats["total_packets"] += data.get("packets", data.get("packets_fw", 0) + data.get("packets_bw", 0))
+                        
+                        # Update top_apps
+                        app_name = flow_obj["app"]
+                        self.stats["top_apps"][app_name] = self.stats["top_apps"].get(app_name, 0) + flow_obj["bytes"]
                         
                     elif topic == "alerts":
-                        # Convert Alert to API AlertObj format
-                        # Processing uses: alert_type, severity, message, timestamp
                         alert_obj = {
-                            "type": "blocked" if "Blocked" in data.get("alert_type", "") else "anomaly",
-                            "ip": data.get("flow_id", "").split("-")[0].split(":")[0], # Simplistic IP extraction
-                            "reason": data.get("message", ""),
-                            "ts": data.get("timestamp", datetime.utcnow().isoformat())
+                            "type": data.get("type", "blocked" if "Blocked" in data.get("alert_type", "") else "anomaly"),
+                            "ip": data.get("src_ip", data.get("flow_id", "").split("-")[0]),
+                            "reason": data.get("reason", data.get("message", "")),
+                            "ts": data.get("ts", data.get("timestamp", datetime.utcnow().isoformat()))
                         }
                         self.alerts.appendleft(alert_obj)
                         
@@ -141,6 +214,75 @@ class DataLoader:
             logger.info("Kafka consumer loop cancelled")
         finally:
             consumer.close()
+
+    async def _simulate_loop(self):
+        """Generate simulated traffic data continuously."""
+        logger.info("Simulated data generator started — dashboard will show live data")
+        
+        # Seed with initial data so dashboard isn't empty on first load
+        app_bytes = {}
+        total_packets = 0
+        total_bytes = 0
+        blocked_count = 0
+        
+        # Pre-seed 20 flows
+        for _ in range(20):
+            flow = _generate_flow()
+            self.flows.appendleft(flow)
+            total_bytes += flow["bytes"]
+            pkt = random.randint(10, 500)
+            total_packets += pkt
+            if flow["blocked"]:
+                blocked_count += 1
+            app_bytes[flow["app"]] = app_bytes.get(flow["app"], 0) + flow["bytes"]
+        
+        # Seed 5 alerts
+        for _ in range(5):
+            self.alerts.appendleft(_generate_alert())
+        
+        self.stats = {
+            "total_packets": total_packets,
+            "total_bytes": total_bytes,
+            "blocked_count": blocked_count,
+            "top_apps": dict(sorted(app_bytes.items(), key=lambda x: x[1], reverse=True)[:5])
+        }
+        
+        # Continuous generation loop
+        try:
+            while True:
+                await asyncio.sleep(random.uniform(1.0, 3.0))
+                
+                # Generate 1-5 new flows per tick
+                batch = random.randint(1, 5)
+                for _ in range(batch):
+                    flow = _generate_flow()
+                    self.flows.appendleft(flow)
+                    
+                    pkt = random.randint(10, 500)
+                    total_packets += pkt
+                    total_bytes += flow["bytes"]
+                    
+                    if flow["blocked"]:
+                        blocked_count += 1
+                    
+                    app_bytes[flow["app"]] = app_bytes.get(flow["app"], 0) + flow["bytes"]
+                
+                # Occasionally generate an alert
+                if random.random() < 0.3:
+                    self.alerts.appendleft(_generate_alert())
+                    if random.random() < 0.5:
+                        blocked_count += 1
+                
+                self.stats = {
+                    "total_packets": total_packets,
+                    "total_bytes": total_bytes,
+                    "blocked_count": blocked_count,
+                    "top_apps": dict(sorted(app_bytes.items(), key=lambda x: x[1], reverse=True)[:5])
+                }
+                
+        except asyncio.CancelledError:
+            logger.info("Simulated data generator stopped")
+
 
 # Global singleton instance
 data_manager = DataLoader()
