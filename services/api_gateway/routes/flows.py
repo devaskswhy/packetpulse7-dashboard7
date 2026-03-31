@@ -37,8 +37,8 @@ async def get_flows(
     start_time: Optional[datetime.datetime] = None,
     end_time: Optional[datetime.datetime] = None
 ):
-    # If filters are present, use DB
-    if any([src_ip, app, start_time, end_time]) or page > 1:
+    # 1. Try DB first to see if persistent state exists
+    try:
         async with AsyncSessionLocal() as session:
             filters = {
                 "src_ip": src_ip,
@@ -48,39 +48,41 @@ async def get_flows(
             }
             db_flows = await db_get_flows(session, page, limit, filters)
             
-            # Map DB objects to Pydantic Response model
-            flows_out = []
-            for f in db_flows:
-                flows_out.append({
-                    "timestamp": f.last_seen.isoformat() + "Z",
-                    "src_ip": f.src_ip,
-                    "dst_ip": f.dst_ip,
-                    "src_port": f.src_port,
-                    "dst_port": f.dst_port,
-                    "protocol": f.protocol,
-                    "app": f.app,
-                    "sni": f.sni,
-                    "bytes": f.bytes,
-                    "blocked": f.blocked,
-                    "flow_id": f.flow_id
-                })
-            
-            return FlowsResponse(
-                total=len(flows_out), # We don't have total count yet, we should probably add it
-                page=page,
-                limit=limit,
-                flows=flows_out
-            )
+            if db_flows:
+                flows_out = []
+                for f in db_flows:
+                    flows_out.append({
+                        "timestamp": f.last_seen.isoformat() + "Z",
+                        "src_ip": f.src_ip,
+                        "dst_ip": f.dst_ip,
+                        "src_port": f.src_port,
+                        "dst_port": f.dst_port,
+                        "protocol": f.protocol,
+                        "app": f.app,
+                        "sni": f.sni,
+                        "bytes": f.bytes,
+                        "blocked": f.blocked,
+                        "flow_id": f.flow_id
+                    })
+                
+                return FlowsResponse(
+                    total=len(flows_out),
+                    page=page,
+                    limit=limit,
+                    flows=flows_out
+                )
+    except Exception:
+        pass  # Fall through to Redis/memory
 
-    # Try Redis first for "live" recent view
+    # 2. Try Redis first for "live" recent view
     active_flows = await get_active_flows(limit=100)
     
-    if active_flows is not None:
+    if active_flows:  # Must have elements, not just be a list
         all_flows = active_flows
     else:
-        # Fallback to in-memory deque
+        # 3. Fallback to in-memory simulating deque
         data = data_manager.get_data()
-        all_flows = data.get("flows", [])
+        all_flows = list(data.get("flows", []))
     
     start = (page - 1) * limit
     end = start + limit

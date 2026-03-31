@@ -18,7 +18,8 @@ class StatsResponse(BaseModel):
 @router.get("", response_model=StatsResponse)
 async def get_stats():
     cached = await get_cached_stats()
-    if cached:
+    # Check that cached state isn't just an empty structure of 0s
+    if cached and cached.get("total_packets", 0) > 0:
         return cached
 
     data = data_manager.get_data()
@@ -32,17 +33,19 @@ async def get_stats():
 
 @router.get("/history")
 async def get_history(hours: int = 24):
-    async with AsyncSessionLocal() as session:
-        history = await get_stats_history(session, hours)
-        
-        # Format for response
-        return [
-            {
-                "hour": row.hour.isoformat() + "Z",
-                "avg_packets": float(row.avg_packets),
-                "avg_bytes": float(row.avg_bytes),
-                "avg_blocked": float(row.avg_blocked)
-            }
-            for row in history
-        ]
+    try:
+        async with AsyncSessionLocal() as session:
+            history = await get_stats_history(session, hours)
+            
+            return [
+                {
+                    "hour": row.hour.isoformat() + "Z",
+                    "avg_packets": float(row.avg_packets),
+                    "avg_bytes": float(row.avg_bytes),
+                    "avg_blocked": float(row.avg_blocked)
+                }
+                for row in history
+            ]
+    except Exception:
+        return []
 

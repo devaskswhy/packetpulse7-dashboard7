@@ -138,20 +138,24 @@ class DataLoader:
         
         loop = asyncio.get_running_loop()
         
-        # Give Kafka 5 seconds to connect, then give up
-        for attempt in range(3):
-            try:
-                consumer = Consumer(consumer_conf)
-                await loop.run_in_executor(None, consumer.subscribe, ["processed_packets", "alerts"])
-                logger.info("Successfully connected to Kafka — consuming live data")
-                self._source = "kafka"
+        # Give Kafka 3 seconds to actually connect before falling back
+        try:
+            consumer = Consumer(consumer_conf)
+            # This blocks until metadata is fetched or timeout occurs. 
+            # If Kafka is completely down, it throws KafkaException.
+            metadata = await loop.run_in_executor(None, lambda: consumer.list_topics(timeout=3.0))
+            if not metadata or not metadata.topics:
+                raise Exception("Failed to fetch Kafka metadata or no topics available")
                 
-                # Run Kafka consumer loop
-                await self._kafka_loop(consumer, loop)
-                return True
-            except Exception as e:
-                logger.warning(f"Kafka attempt {attempt + 1}/3 failed: {e}")
-                await asyncio.sleep(2.0)
+            await loop.run_in_executor(None, consumer.subscribe, ["processed_packets", "alerts"])
+            logger.info("Successfully connected to Kafka — consuming live data")
+            self._source = "kafka"
+            
+            # Run Kafka consumer loop
+            await self._kafka_loop(consumer, loop)
+            return True
+        except Exception as e:
+            logger.warning(f"Kafka connection failed: {e}. Falling back to simulated data immediately.")
         
         return False
     

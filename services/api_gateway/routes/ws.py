@@ -56,7 +56,7 @@ async def websocket_endpoint(websocket: WebSocket):
             }
 
             await websocket.send_json(data_package)
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(2.0)
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
