@@ -137,18 +137,29 @@ class DataLoader:
             await loop.run_in_executor(None, consumer.subscribe, ["processed_packets", "alerts"])
             logger.info("Successfully connected to Kafka — consuming live data")
             self._source = "kafka"
-            await self._kafka_loop(consumer, loop)
-            return True
+            return await self._kafka_loop(consumer, loop)
         except Exception as e:
             logger.warning(f"Kafka connection failed: {e}. Falling back to simulated data.")
 
         return False
 
-    async def _kafka_loop(self, consumer, loop):
+    async def _kafka_loop(self, consumer, loop) -> bool:
+        watchdog_started_at = asyncio.get_running_loop().time()
         try:
             while True:
                 msg = await loop.run_in_executor(None, consumer.poll, 0.1)
                 if msg is None:
+                    # Kafka can appear connected but deliver nothing on some setups.
+                    # If we still have zero packets after 10s, fail over to simulator.
+                    if (
+                        asyncio.get_running_loop().time() - watchdog_started_at >= 10
+                        and self.stats.get("total_packets", 0) == 0
+                    ):
+                        logger.warning(
+                            "Kafka connected but no data received after 10s "
+                            "(total_packets=0). Switching to simulated data."
+                        )
+                        return False
                     await asyncio.sleep(0.01)
                     continue
                 if msg.error():
@@ -207,6 +218,7 @@ class DataLoader:
 
         except asyncio.CancelledError:
             logger.info("Kafka consumer loop cancelled")
+            return False
         finally:
             consumer.close()
 
