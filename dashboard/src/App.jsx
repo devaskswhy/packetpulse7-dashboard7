@@ -36,9 +36,9 @@ export default function App() {
   }, [apiKey]);
 
   return (
-    <div className="flex h-screen bg-[#0a0e1a] text-[#e2e8f0] font-sans overflow-hidden">
+    <div className="flex h-screen bg-gray-900 text-[#e2e8f0] font-sans overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#0d1221] border-r border-[#1e293b] flex flex-col flex-shrink-0">
+      <aside className="w-64 bg-gray-800 border-r border-[#1e293b] flex flex-col flex-shrink-0">
         <div className="h-[72px] flex items-center px-6 border-b border-[#1e293b]">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#22d3ee] to-[#a78bfa] flex items-center justify-center font-bold text-[#0a0e1a] shadow-[0_0_20px_rgba(34,211,238,0.15)] mr-3">
             PP
@@ -72,7 +72,7 @@ export default function App() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-[72px] bg-[#0a0e1a]/80 backdrop-blur-md border-b border-[#1e293b] flex items-center justify-between px-8 flex-shrink-0 z-10">
+        <header className="h-[72px] bg-gray-900/80 backdrop-blur-md border-b border-[#1e293b] flex items-center justify-between px-8 flex-shrink-0 z-10">
           <h2 className="text-xl font-bold tracking-tight text-[#e2e8f0]">{title}</h2>
           <div className="flex items-center gap-4">
             <ConnectionBadge />
