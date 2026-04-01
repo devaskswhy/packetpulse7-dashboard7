@@ -1,39 +1,24 @@
-/**
- * DashboardPage — Overview with stat cards, charts, and recent flows.
- * Uses global real-time DPIContext.
- */
-
-import { useDPI } from "../context/DPIContext";
-
-import StatsCards from "../components/StatsCards";
-import TrafficChart from "../components/TrafficChart";
-import AppPieChart from "../components/AppPieChart";
-import FlowsTable from "../components/FlowsTable";
+import LiveTrafficChart from '../components/LiveTrafficChart';
+import AppDistributionChart from '../components/AppDistributionChart';
+import AlertsStream from '../components/AlertsStream';
+import { usePollerFallback } from '../lib/poller';
 
 export default function DashboardPage() {
-    const { stats, flows, loading } = useDPI();
+  usePollerFallback();
 
-    if (loading) {
-        return (
-            <div className="loading-container">
-                <div className="spinner" />
-                <span className="loading-text">Loading dashboard…</span>
-            </div>
-        );
-    }
-
-    return (
-        <>
-            <StatsCards stats={stats} />
-
-            <div className="charts-row">
-                <TrafficChart stats={stats} />
-                <AppPieChart flows={flows} />
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <FlowsTable flows={flows || []} compact />
-            </div>
-        </>
-    );
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <LiveTrafficChart />
+        </div>
+        <div className="lg:col-span-1">
+          <AppDistributionChart />
+        </div>
+      </div>
+      <div className="grid grid-cols-1">
+        <AlertsStream limit={10} showHeader={true} />
+      </div>
+    </div>
+  );
 }
