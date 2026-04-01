@@ -1,34 +1,32 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '../store/useAppStore';
-
-const API_BASE = 'http://localhost:8000';
-
-const fetchStats = async (apiKey) => {
+import { API_BASE, API_KEY } from '../config';
+const fetchStats = async () => {
   const res = await fetch(`${API_BASE}/stats`, {
-    headers: { 'X-API-Key': apiKey }
+    headers: { 'X-API-Key': API_KEY }
   });
   if (!res.ok) throw new Error('Fetch failed');
   return res.json();
 };
 
-const fetchAlerts = async (apiKey) => {
+const fetchAlerts = async () => {
   const res = await fetch(`${API_BASE}/alerts?limit=100`, {
-    headers: { 'X-API-Key': apiKey }
+    headers: { 'X-API-Key': API_KEY }
   });
   if (!res.ok) throw new Error('Fetch failed');
   return res.json();
 };
 
 export const usePollerFallback = () => {
-  const { wsStatus, apiKey, setStats, setAlerts } = useAppStore();
+  const { wsStatus, setStats, setAlerts } = useAppStore();
   const isPolling = wsStatus === 'polling';
   const queryClient = useQueryClient();
 
   useQuery({
-    queryKey: ['stats', apiKey],
+    queryKey: ['stats'],
     queryFn: async () => {
-      const data = await fetchStats(apiKey);
+      const data = await fetchStats();
       setStats(data);
       return data;
     },
@@ -37,9 +35,9 @@ export const usePollerFallback = () => {
   });
 
   useQuery({
-    queryKey: ['alerts', apiKey],
+    queryKey: ['alerts'],
     queryFn: async () => {
-      const data = await fetchAlerts(apiKey);
+      const data = await fetchAlerts();
       setAlerts(data.data || []);
       return data;
     },

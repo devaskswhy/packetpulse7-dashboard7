@@ -11,6 +11,7 @@ Features:
 
 import logging
 import asyncio
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -24,8 +25,10 @@ from slowapi.errors import RateLimitExceeded
 from routes import stats, flows, alerts, ws, admin
 from data_loader import data_manager
 from connection_manager import ws_manager
+from redis_client import redis_client
 
 logger = logging.getLogger("api_gateway")
+API_KEYS = set(os.getenv("API_KEY", "dev_key_12345").split(","))
 
 # ---------------------------------------------------------------------------
 # Rate Limiter  (100 requests/min per IP)
@@ -40,6 +43,10 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle."""
     logger.info("PacketPulse API Gateway starting up")
+    for key in API_KEYS:
+        clean_key = key.strip()
+        if clean_key:
+            await redis_client.sadd("api:keys", clean_key)
     poll_task = asyncio.create_task(data_manager.poll_loop())
     yield
     logger.info("PacketPulse API Gateway shutting down")

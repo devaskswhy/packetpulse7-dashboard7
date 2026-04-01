@@ -1,11 +1,12 @@
 import { useAppStore } from '../store/useAppStore';
+import { API_KEY, WS_BASE } from '../config';
 
 let ws = null;
 let reconnectCount = 0;
 let reconnectTimer = null;
 
 const connectWS = () => {
-  const { apiKey, setWsStatus, setStats, prependAlerts } = useAppStore.getState();
+  const { setWsStatus, setStats, prependAlerts } = useAppStore.getState();
   
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
     return;
@@ -14,7 +15,7 @@ const connectWS = () => {
   setWsStatus('connecting');
   
   // Connect to the specific localhost:8000 endpoint
-  const wsUrl = `ws://localhost:8000/ws/live?api_key=${encodeURIComponent(apiKey)}`;
+  const wsUrl = `${WS_BASE}/ws/live?api_key=${encodeURIComponent(API_KEY)}`;
   
   try {
     ws = new WebSocket(wsUrl);

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react";
-import { fetchStats, fetchFlows, fetchAlerts, healthCheck } from "../api";
+import { API_BASE, API_KEY, WS_BASE } from "../config";
 
 const DPIContext = createContext(null);
 
@@ -19,13 +19,13 @@ export function DPIProvider({ children }) {
     const pullData = async () => {
         try {
             const [statsRes, flowsRes, alertsRes] = await Promise.all([
-                fetchStats(),
-                fetchFlows({ limit: 500 }),
-                fetchAlerts(),
+                fetch(`${API_BASE}/stats`, { headers: { "X-API-Key": API_KEY } }).then((r) => r.json()),
+                fetch(`${API_BASE}/flows?limit=500`, { headers: { "X-API-Key": API_KEY } }).then((r) => r.json()),
+                fetch(`${API_BASE}/alerts`, { headers: { "X-API-Key": API_KEY } }).then((r) => r.json()),
             ]);
             setStats(statsRes || null);
-            setFlows(flowsRes?.flows || []);
-            setAlerts(alertsRes || []);
+            setFlows(flowsRes?.flows || flowsRes?.data || []);
+            setAlerts(alertsRes?.alerts || alertsRes?.data || alertsRes || []);
             setLoading(false);
             return true;
         } catch (err) {
@@ -61,8 +61,7 @@ export function DPIProvider({ children }) {
             if (isMounted) connectWs();
         };
 
-        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${wsProtocol}//localhost:8000/ws/live`;
+        const wsUrl = `${WS_BASE}/ws/live?api_key=${encodeURIComponent(API_KEY)}`;
 
         const connectWs = () => {
             const socket = new WebSocket(wsUrl);

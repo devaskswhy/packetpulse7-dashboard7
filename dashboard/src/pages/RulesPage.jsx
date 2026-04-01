@@ -1,25 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Shield, Save, CheckCircle, AlertCircle } from 'lucide-react';
-import { useAppStore } from '../store/useAppStore';
-
-const API_BASE = 'http://localhost:8000';
+import { API_BASE, API_KEY } from '../config';
 
 export default function RulesPage() {
-  const apiKey = useAppStore(state => state.apiKey);
   const [blockedIps, setBlockedIps] = useState('');
   const [blockedDomains, setBlockedDomains] = useState('');
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/rules`, { headers: { 'X-API-Key': apiKey } })
+    fetch(`${API_BASE}/rules`, { headers: { 'X-API-Key': API_KEY } })
       .then(res => res.json())
       .then(data => {
         if (data.blocked_ips) setBlockedIps(data.blocked_ips.join('\n'));
         if (data.blocked_domains) setBlockedDomains(data.blocked_domains.join('\n'));
       })
       .catch(err => console.error('Failed to load rules', err));
-  }, [apiKey]);
+  }, []);
 
   const handleSave = async () => {
     setLoading(true);
@@ -33,7 +30,7 @@ export default function RulesPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-API-Key': apiKey 
+          'X-API-Key': API_KEY
         },
         body: JSON.stringify({
           blocked_ips: ips,

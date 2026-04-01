@@ -1,9 +1,13 @@
 import axios from "axios";
+import { API_BASE, API_KEY } from "./config";
 
 const api = axios.create({
-    baseURL: "http://localhost:8000",
+    baseURL: API_BASE,
     timeout: 10_000,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": API_KEY,
+    },
 });
 
 export const fetchStats = () => api.get("/stats").then((r) => r.data);
