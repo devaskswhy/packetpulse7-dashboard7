@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: packet-service
+  namespace: packetpulse
+  labels:
+    app: packet-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: packet-service
+  template:
+    metadata:
+      labels:
+        app: packet-service
+    spec:
+      containers:
+      - name: packet-service
+        image: packetpulse/packet-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8001
+        envFrom:
+        - configMapRef:
+            name: packetpulse-config
+        - secretRef:
+            name: packetpulse-secrets
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 5

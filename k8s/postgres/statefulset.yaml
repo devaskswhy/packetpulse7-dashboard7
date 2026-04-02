@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: packetpulse
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      initContainers:
+      - name: alembic-migrate
+        image: python:3.11-slim
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          pip install sqlalchemy alembic asyncpg
+          cd /app
+          alembic upgrade head
+        envFrom:
+        - configMapRef:
+            name: packetpulse-config
+        - secretRef:
+            name: packetpulse-secrets
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /app
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: packetpulse
+        - name: POSTGRES_USER
+          value: pp
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: packetpulse-secrets
+              key: POSTGRES_PASSWORD
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "pg_isready -U pp"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "pg_isready -U pp"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
