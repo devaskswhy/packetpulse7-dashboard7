@@ -13,8 +13,30 @@ export function DPIProvider({ children }) {
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [connectionStatus, setConnectionStatus] = useState("offline"); // live, polling, offline
+    const [chartData, setChartData] = useState([]);
     const wsRef = useRef(null);
     const pollingRef = useRef(null);
+    const prevPackets = useRef(0);
+    const prevBytes = useRef(0);
+
+    const updateChartData = (newStats) => {
+        const packetsDelta = Math.max(0, newStats.total_packets - prevPackets.current);
+        const bytesDelta = Math.max(0, newStats.total_bytes - prevBytes.current);
+        
+        prevPackets.current = newStats.total_packets;
+        prevBytes.current = newStats.total_bytes;
+        
+        const newPoint = {
+            time: new Date().toLocaleTimeString(), 
+            packets: packetsDelta,
+            bytes: Math.round(bytesDelta / 1024)
+        };
+        
+        setChartData(prev => {
+            const updated = [...prev, newPoint];
+            return updated.slice(-60); // Keep last 60 points only
+        });
+    };
 
     const pullData = async () => {
         try {
@@ -26,6 +48,7 @@ export function DPIProvider({ children }) {
             setStats(statsRes || null);
             setFlows(flowsRes?.flows || flowsRes?.data || []);
             setAlerts(alertsRes?.alerts || alertsRes?.data || alertsRes || []);
+            if (statsRes) updateChartData(statsRes);
             setLoading(false);
             return true;
         } catch (err) {
@@ -77,7 +100,10 @@ export function DPIProvider({ children }) {
             socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.stats) setStats(data.stats);
+                    if (data.stats) {
+                        setStats(data.stats);
+                        updateChartData(data.stats);
+                    }
                     if (data.flows) setFlows(data.flows);
                     if (data.alerts) setAlerts(data.alerts);
                 } catch (e) {
@@ -121,7 +147,8 @@ export function DPIProvider({ children }) {
         flows: flows || [],
         alerts: alerts || [],
         loading,
-        connectionStatus
+        connectionStatus,
+        chartData
     };
 
     return (

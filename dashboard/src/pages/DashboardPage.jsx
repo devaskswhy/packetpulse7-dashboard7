@@ -6,7 +6,7 @@
 import { useDPI } from "../context/DPIContext";
 
 import StatsCards from "../components/StatsCards";
-import TrafficChart from "../components/TrafficChart";
+import LiveTrafficChart from "../components/LiveTrafficChart";
 import AppPieChart from "../components/AppPieChart";
 import FlowsTable from "../components/FlowsTable";
 
@@ -27,7 +27,7 @@ export default function DashboardPage() {
             <StatsCards stats={stats} />
 
             <div className="charts-row">
-                <TrafficChart stats={stats} />
+                <LiveTrafficChart />
                 <AppPieChart flows={flows} />
             </div>
 
