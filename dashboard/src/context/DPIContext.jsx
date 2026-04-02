@@ -77,6 +77,28 @@ export function DPIProvider({ children }) {
     };
 
     useEffect(() => {
+        const poll = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/stats', {
+                    headers: { 'X-API-Key': 'dev_key_12345' }
+                });
+                const data = await res.json();
+                if (data && data.total_packets !== undefined) {
+                    setStats(data);
+                    updateChartData(data);
+                }
+            } catch (e) {
+                console.error('Polling error:', e);
+            }
+        };
+        
+        // Poll immediately then every 2 seconds
+        poll();
+        const interval = setInterval(poll, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
         let isMounted = true;
 
         const init = async () => {
@@ -84,7 +106,7 @@ export function DPIProvider({ children }) {
             if (isMounted) connectWs();
         };
 
-        const wsUrl = `${WS_BASE}/ws/live?api_key=${encodeURIComponent(API_KEY)}`;
+        const wsUrl = 'ws://localhost:8000/ws/live?api_key=dev_key_12345';
 
         const connectWs = () => {
             const socket = new WebSocket(wsUrl);
@@ -93,30 +115,29 @@ export function DPIProvider({ children }) {
             socket.onopen = () => {
                 if (isMounted) {
                     setConnectionStatus("live");
-                    stopPolling(); // Stop polling if WS is alive
+                    console.log('WebSocket connected');
                 }
             };
 
             socket.onmessage = (event) => {
                 try {
-                    const data = JSON.parse(event.data);
-                    if (data.stats) {
-                        setStats(data.stats);
-                        updateChartData(data.stats);
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'stats' && msg.data) {
+                        setStats(msg.data);
+                        updateChartData(msg.data);
                     }
-                    if (data.flows) setFlows(data.flows);
-                    if (data.alerts) setAlerts(data.alerts);
+                    if (msg.flows) setFlows(msg.flows);
+                    if (msg.alerts) setAlerts(msg.alerts);
                 } catch (e) {
                     console.error("WebSocket payload error:", e);
                 }
             };
 
             socket.onclose = () => {
-                console.log("WebSocket closed, falling back to polling...");
+                console.log("WebSocket closed, but polling continues...");
                 if (isMounted) {
                     setConnectionStatus("polling");
-                    startPolling();
-                    // Attempt WS reconnect slowly in background
+                    // Keep polling running, attempt WS reconnect slowly in background
                     setTimeout(() => {
                         if (isMounted && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED)) {
                             connectWs();
@@ -125,7 +146,8 @@ export function DPIProvider({ children }) {
                 }
             };
 
-            socket.onerror = () => {
+            socket.onerror = (error) => {
+                console.error("WebSocket error:", error);
                 socket.close();
             };
         };
@@ -134,7 +156,6 @@ export function DPIProvider({ children }) {
 
         return () => {
             isMounted = false;
-            stopPolling();
             if (wsRef.current) {
                 wsRef.current.onclose = null; // Prevent reconnect loop on unmount
                 wsRef.current.close();
