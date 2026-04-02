@@ -1,14 +1,22 @@
 ################################################################################
-# PacketPulse DPI System — Kafka Event Backbone
+# PacketPulse DPI System — Complete Docker Setup
 #
 # Services:
 #   zookeeper      – ZooKeeper for Kafka coordination
 #   kafka          – Single-node Kafka broker (port 9092)
 #   kafka-init     – One-shot container that creates required topics
+#   redis          – Redis cache for real-time data
+#   postgres        – PostgreSQL database
+#   packet_service – C++ packet capture service
+#   processing_service – Python packet processing service
+#   detection_service – Python ML detection service
+#   api_gateway    – FastAPI gateway service
+#   dashboard      – React dashboard with nginx
 #
 # Usage:
-#   docker compose up -d
-#   docker compose logs -f kafka-init   # confirm topic creation
+#   make up    # docker compose up --build -d
+#   make down  # docker compose down
+#   make logs  # docker compose logs -f
 ################################################################################
 
 
@@ -28,6 +36,8 @@ services:
       - zookeeper-data:/var/lib/zookeeper/data
       - zookeeper-log:/var/lib/zookeeper/log
     restart: unless-stopped
+    networks:
+      - internal
 
   # --------------------------------------------------------------------------
   # Kafka Broker
@@ -42,14 +52,12 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Listeners: PLAINTEXT for inter-container, HOST for host-machine access
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,HOST://localhost:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      # Disable automatic topic creation — topics are managed by kafka-init
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_LOG_RETENTION_HOURS: 1
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
@@ -62,6 +70,8 @@ services:
       retries: 10
       start_period: 30s
     restart: unless-stopped
+    networks:
+      - internal
 
   # --------------------------------------------------------------------------
   # Redis Cache
@@ -77,6 +87,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - internal
 
   # --------------------------------------------------------------------------
   # PostgreSQL Database
@@ -98,6 +110,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - internal
 
   # --------------------------------------------------------------------------
   # Topic Initializer (one-shot)
@@ -115,7 +129,7 @@ services:
 
         BROKER="kafka:29092"
 
-        echo '[1/3] Creating topic: raw_packets (partitions=4, retention=3600000ms)'
+        echo '[1/4] Creating topic: raw_packets (partitions=4, retention=3600000ms)'
         kafka-topics --bootstrap-server $$BROKER \
           --create --if-not-exists \
           --topic raw_packets \
@@ -123,7 +137,7 @@ services:
           --replication-factor 1 \
           --config retention.ms=3600000
 
-        echo '[2/3] Creating topic: processed_packets (partitions=4)'
+        echo '[2/4] Creating topic: processed_packets (partitions=4)'
         kafka-topics --bootstrap-server $$BROKER \
           --create --if-not-exists \
           --topic processed_packets \
@@ -148,6 +162,8 @@ services:
         echo '=== Topics created successfully ==='
         kafka-topics --bootstrap-server $$BROKER --list
     restart: "no"
+    networks:
+      - internal
 
   # --------------------------------------------------------------------------
   # Microservices
@@ -158,20 +174,19 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    network_mode: host # Needs to sniff host interface, maybe? 
-    # Or just default Docker network depending on OS but let's stick to standard port mapping
     ports:
       - "8001:8001"
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092 # Assuming host networking OR map it correctly 
-      # Actually if it runs in docker network, it should be kafka:29092
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    restart: always
+      - KAFKA_TOPIC=raw_packets
+      - REDIS_URL=redis://redis:6379/0
+      - INTERFACE=eth0
+    restart: unless-stopped
+    networks:
+      - internal
 
   processing_service:
-    build:
-      context: .
-      dockerfile: services/processing_service/Dockerfile
+    build: ./services/processing_service
     container_name: packetpulse-processing-service
     depends_on:
       kafka:
@@ -182,12 +197,16 @@ services:
       - "8002:8002"
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    restart: always
+      - KAFKA_TOPIC_PROCESSED=processed_packets
+      - KAFKA_TOPIC_RAW=raw_packets
+      - REDIS_URL=redis://redis:6379/0
+      - HEALTH_PORT=8002
+    restart: unless-stopped
+    networks:
+      - internal
 
   detection_service:
-    build:
-      context: .
-      dockerfile: services/detection_service/Dockerfile
+    build: ./services/detection_service
     container_name: packetpulse-detection-service
     depends_on:
       kafka:
@@ -198,12 +217,17 @@ services:
       - "8003:8003"
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    restart: always
+      - KAFKA_TOPIC_PROCESSED=processed_packets
+      - KAFKA_TOPIC_ALERTS=alerts
+      - REDIS_URL=redis://redis:6379/0
+      - MODEL_PATH=./models
+      - HEALTH_PORT=8003
+    restart: unless-stopped
+    networks:
+      - internal
 
   api_gateway:
-    build:
-      context: .
-      dockerfile: services/api_gateway/Dockerfile
+    build: ./services/api_gateway
     container_name: packetpulse-api-gateway
     depends_on:
       kafka:
@@ -216,12 +240,39 @@ services:
       - "8000:8000"
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - DATABASE_URL=postgresql+asyncpg://pp:pp_secret@postgres:5432/packetpulse
-      - ADMIN_SECRET=${ADMIN_SECRET:-packetpulse-admin-secret}
-    restart: always
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_URL=postgresql+asyncpg://pp:pp_secret@postgres/packetpulse
+      - ADMIN_SECRET=${ADMIN_SECRET:-change_me}
+      - API_KEY=${API_KEY:-dev_key_12345}
+      - HEALTH_PORT=8001
+    restart: unless-stopped
+    networks:
+      - internal
+      - frontend
 
+  dashboard:
+    build: ./dashboard
+    container_name: packetpulse-dashboard
+    depends_on:
+      - api_gateway
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    networks:
+      - frontend
+
+# --------------------------------------------------------------------------
+# Networks
+# --------------------------------------------------------------------------
+networks:
+  internal:
+    driver: bridge
+  frontend:
+    driver: bridge
+
+# --------------------------------------------------------------------------
+# Volumes
+# --------------------------------------------------------------------------
 volumes:
   zookeeper-data:
   zookeeper-log:
