@@ -3,6 +3,7 @@ import DashboardPage from "./pages/DashboardPage";
 import FlowsPage from "./pages/FlowsPage";
 import AlertsPage from "./pages/AlertsPage";
 import { useDPI } from "./context/DPIContext";
+import CyberCursor from "./components/effects/CyberCursor";
 
 const NAV_ITEMS = [
   { to: "/", icon: "📊", label: "Dashboard" },
@@ -35,6 +36,7 @@ export default function App() {
 
   return (
     <div className="app-layout">
+      <CyberCursor />
       {/* ---- Sidebar ---- */}
       <aside className="sidebar">
         <div className="sidebar-brand">
