@@ -728,6 +728,95 @@ a {
   color: var(--text-muted);
 }
 
+/* ---- Cyberpunk Card Effects ---- */
+@keyframes borderGlow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.cyber-card {
+  position: relative;
+  background: rgba(15, 17, 23, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.cyber-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, #22d3ee, transparent, #a78bfa);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: borderGlow 3s ease-in-out infinite;
+}
+
+.cyber-card:hover::before {
+  background: linear-gradient(135deg, #22d3ee, #a78bfa, #22d3ee);
+  animation: none;
+  opacity: 1;
+}
+
+.cyber-card:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #22d3ee;
+  animation: scanline 3s linear infinite;
+  z-index: 1;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(0); opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { transform: translateY(200px); opacity: 0; }
+}
+
+.cyber-card .corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #22d3ee;
+  z-index: 2;
+}
+
+.cyber-card .corner-tl {
+  top: 6px;
+  left: 6px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.cyber-card .corner-tr {
+  top: 6px;
+  right: 6px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.cyber-card .corner-bl {
+  bottom: 6px;
+  left: 6px;
+  border-right: none;
+  border-top: none;
+}
+
+.cyber-card .corner-br {
+  bottom: 6px;
+  right: 6px;
+  border-left: none;
+  border-top: none;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
   .charts-row {

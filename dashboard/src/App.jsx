@@ -6,6 +6,7 @@ import { useDPI } from "./context/DPIContext";
 import CyberCursor from "./components/effects/CyberCursor";
 import NetworkBackground from "./components/effects/NetworkBackground";
 import GlitchText from "./components/effects/GlitchText";
+import AlertToast from "./components/effects/AlertToast";
 
 const NAV_ITEMS = [
   { to: "/", icon: "📊", label: "Dashboard" },
@@ -91,6 +92,7 @@ export default function App() {
           </Routes>
         </div>
       </div>
+      <AlertToast />
     </div>
   );
 }
