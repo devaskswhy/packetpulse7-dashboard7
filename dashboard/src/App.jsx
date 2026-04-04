@@ -5,6 +5,7 @@ import AlertsPage from "./pages/AlertsPage";
 import { useDPI } from "./context/DPIContext";
 import CyberCursor from "./components/effects/CyberCursor";
 import NetworkBackground from "./components/effects/NetworkBackground";
+import GlitchText from "./components/effects/GlitchText";
 
 const NAV_ITEMS = [
   { to: "/", icon: "📊", label: "Dashboard" },
@@ -44,7 +45,7 @@ export default function App() {
         <div className="sidebar-brand">
           <div className="brand-icon">PP</div>
           <div>
-            <h1>PacketPulse</h1>
+            <GlitchText text="PacketPulse" className="font-bold text-sm" />
             <span>DPI Engine</span>
           </div>
         </div>
