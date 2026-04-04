@@ -4,6 +4,7 @@ import FlowsPage from "./pages/FlowsPage";
 import AlertsPage from "./pages/AlertsPage";
 import { useDPI } from "./context/DPIContext";
 import CyberCursor from "./components/effects/CyberCursor";
+import NetworkBackground from "./components/effects/NetworkBackground";
 
 const NAV_ITEMS = [
   { to: "/", icon: "📊", label: "Dashboard" },
@@ -37,6 +38,7 @@ export default function App() {
   return (
     <div className="app-layout">
       <CyberCursor />
+      <NetworkBackground />
       {/* ---- Sidebar ---- */}
       <aside className="sidebar">
         <div className="sidebar-brand">
@@ -72,7 +74,7 @@ export default function App() {
       </aside>
 
       {/* ---- Main Area ---- */}
-      <div className="main-content">
+      <div className="main-content" style={{ position: 'relative', zIndex: 1 }}>
         <header className="topbar">
           <h2>{title}</h2>
           <div className="topbar-actions">
