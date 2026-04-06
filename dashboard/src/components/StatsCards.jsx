@@ -97,6 +97,11 @@ export default function StatsCards({ stats }) {
     };
 
     const formatAnimatedValue = (originalValue, animatedValue) => {
+        // For non-numeric values like app names, return as-is
+        if (typeof originalValue === 'string' && isNaN(parseFloat(originalValue))) {
+            return originalValue;
+        }
+        
         if (typeof originalValue === 'number') {
             return formatNumber(animatedValue);
         }
