@@ -9,10 +9,12 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000, // Increase warning limit to 1MB
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          charts: ['recharts'],
-          motion: ['framer-motion']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) return 'vendor';
+            if (id.includes('recharts')) return 'charts';
+            if (id.includes('framer-motion')) return 'motion';
+          }
         }
       }
     }

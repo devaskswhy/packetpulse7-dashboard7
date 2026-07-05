@@ -4,6 +4,10 @@ import { BrowserRouter } from "react-router-dom";
 import { DPIProvider } from "./context/DPIContext";
 import App from "./App.jsx";
 import "./index.css";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

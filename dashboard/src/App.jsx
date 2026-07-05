@@ -11,6 +11,9 @@ import MatrixIntro from "./components/effects/MatrixIntro";
 import TypeWriter from "./components/effects/TypeWriter";
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Lenis from 'lenis';
 
 const NAV_ITEMS = [
   { to: "/", icon: "📊", label: "Dashboard" },
@@ -34,6 +37,18 @@ export default function App() {
   const [packetsPerSecond, setPacketsPerSecond] = useState(0);
   const previousPacketsRef = useRef(0);
   const previousTimeRef = useRef(Date.now());
+
+  useEffect(() => {
+    const lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1 });
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+    
+    return () => {
+      lenis.destroy();
+      gsap.ticker.remove((time) => lenis.raf(time * 1000));
+    };
+  }, []);
 
   // Calculate packets per second
   useEffect(() => {
