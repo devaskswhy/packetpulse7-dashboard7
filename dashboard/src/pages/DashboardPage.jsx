@@ -6,7 +6,7 @@
 import { motion } from "framer-motion";
 import { useDPI } from "../context/DPIContext";
 import { useCountUp } from "../hooks/useCountUp";
-import { Link } from "react-router-dom";
+
 import { useMemo, useCallback, useState, useEffect } from "react";
 
 import StatsCards from "../components/StatsCards";
@@ -224,19 +224,21 @@ export default function DashboardPage() {
                     }}>
                         TOP THREATS SUMMARY
                     </h3>
-                    <Link
-                        to="/alerts"
+                    <a
+                        href="#alerts"
+                        onClick={(e) => { e.preventDefault(); document.getElementById('alerts')?.scrollIntoView({ behavior: 'smooth' }); }}
                         style={{
                             color: '#22d3ee',
                             fontSize: '12px',
                             textDecoration: 'none',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '4px'
+                            gap: '4px',
+                            cursor: 'pointer'
                         }}
                     >
                         VIEW ALL →
-                    </Link>
+                    </a>
                 </div>
 
                 {recentAlerts && recentAlerts.length > 0 ? (

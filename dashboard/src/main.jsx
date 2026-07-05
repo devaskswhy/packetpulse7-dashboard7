@@ -1,6 +1,5 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
 import { DPIProvider } from "./context/DPIContext";
 import App from "./App.jsx";
 import "./index.css";
@@ -11,10 +10,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
-      <DPIProvider>
-        <App />
-      </DPIProvider>
-    </BrowserRouter>
+    <DPIProvider>
+      <App />
+    </DPIProvider>
   </StrictMode>
 );
