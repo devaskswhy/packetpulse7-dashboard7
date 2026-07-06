@@ -27,7 +27,6 @@ export default function AlertsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const alertsPerPage = 20;
   const previousAlertsRef = useRef([]);
-  const containerRef = useRef(null);
 
   // Fetch alerts data
   const fetchAlerts = async () => {
@@ -128,9 +127,7 @@ export default function AlertsPage() {
 
   // Scroll to top and dismiss banner
   const scrollToTop = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
-    }
+    document.getElementById('alerts')?.scrollIntoView({ behavior: 'smooth' });
     setShowNewAlertsBanner(false);
     setNewAlertsCount(0);
   };
@@ -175,7 +172,7 @@ export default function AlertsPage() {
   }
 
   return (
-    <div ref={containerRef} style={{ padding: "20px" }}>
+    <div style={{ padding: "20px" }}>
       {/* Header */}
       <div style={{ marginBottom: "30px" }}>
         <h1 style={{

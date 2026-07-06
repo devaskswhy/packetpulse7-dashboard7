@@ -89,9 +89,14 @@ a {
 
 /* ---- Page Sections ---- */
 .page-section {
-  min-height: 100vh;
+  min-height: auto;
   padding: 48px 40px 60px;
   position: relative;
+}
+
+/* Overview is the hero section — keep it viewport-filling */
+#overview.page-section {
+  min-height: 100vh;
 }
 
 .page-section + .page-section {

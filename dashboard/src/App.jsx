@@ -59,6 +59,18 @@ export default function App() {
     return () => triggers.forEach((t) => t.kill());
   }, []);
 
+  /* ---- Refresh ScrollTrigger on resize / content load ---- */
+  useEffect(() => {
+    // Recalc after async data loads shift section heights
+    const timer = setTimeout(() => ScrollTrigger.refresh(), 1500);
+    const onResize = () => ScrollTrigger.refresh();
+    window.addEventListener('resize', onResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+
   /* ---- Slide the active indicator ---- */
   useEffect(() => {
     const link = navLinksRef.current[activeSection];
