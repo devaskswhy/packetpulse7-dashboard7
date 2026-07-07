@@ -82,7 +82,7 @@ export default function FlowsTable({ flows, compact = false }) {
                                 </td>
                                 <td>
                                     <span
-                                        className={`badge ${f.protocol.toLowerCase()}`}
+                                        className={`badge ${(f.protocol || '').toLowerCase()}`}
                                     >
                                         {f.protocol}
                                     </span>

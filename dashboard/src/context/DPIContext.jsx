@@ -79,8 +79,8 @@ export function DPIProvider({ children }) {
     useEffect(() => {
         const poll = async () => {
             try {
-                const res = await fetch('http://localhost:8000/stats', {
-                    headers: { 'X-API-Key': 'dev_key_12345' }
+                const res = await fetch(`${API_BASE}/stats`, {
+                    headers: { 'X-API-Key': API_KEY }
                 });
                 const data = await res.json();
                 if (data && data.total_packets !== undefined) {
@@ -106,7 +106,7 @@ export function DPIProvider({ children }) {
             if (isMounted) connectWs();
         };
 
-        const wsUrl = 'ws://localhost:8000/ws/live?api_key=dev_key_12345';
+        const wsUrl = `${WS_BASE}/ws/live?api_key=${API_KEY}`;
 
         const connectWs = () => {
             const socket = new WebSocket(wsUrl);

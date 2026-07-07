@@ -22,8 +22,8 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchFlows = async () => {
             try {
-                const res = await fetch('http://localhost:8000/flows?limit=5', {
-                    headers: { 'X-API-Key': 'dev_key_12345' }
+                const res = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/flows?limit=5`, {
+                    headers: { 'X-API-Key': import.meta.env.VITE_API_KEY || 'dev_key_12345' }
                 });
                 const data = await res.json();
                 const flowList = Array.isArray(data) ? data : (data.data ?? []);
@@ -268,6 +268,9 @@ export default function DashboardPage() {
                                 <span style={{ color: '#22d3ee', fontFamily: 'monospace', fontSize: '11px' }}>
                                     {alert.ip || 'Unknown'}
                                 </span>
+                                <div style={{ color: getSeverityColor(alert.type), fontWeight: 'bold' }}>
+                                    [{(alert.type || 'UNKNOWN').toUpperCase()}]
+                                </div>
                                 <span style={{ color: '#64748b', fontSize: '11px' }}>
                                     {getTimeAgo(alert.ts)}
                                 </span>

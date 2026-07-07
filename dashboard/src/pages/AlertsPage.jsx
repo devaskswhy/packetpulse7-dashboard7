@@ -408,6 +408,9 @@ export default function AlertsPage() {
                     }}>
                       {severity.toUpperCase()}
                     </span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300 w-24 flex-shrink-0">
+                      [{(alert.type || 'UNKNOWN').toUpperCase()}]
+                    </span>
                     <span style={{
                       color: "#e2e8f0",
                       fontSize: "12px",
