@@ -12,6 +12,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import { ACCENT } from './lib/motion';
+import { useScrollAnimations } from './hooks/useScrollAnimations';
 
 /* ---- Section definitions ---- */
 const SECTIONS = [
@@ -29,6 +30,9 @@ export default function App() {
   const lenisRef = useRef(null);
   const indicatorRef = useRef(null);
   const navLinksRef = useRef({});
+
+  /* ---- Scroll-driven animations (GSAP ScrollTrigger) ---- */
+  useScrollAnimations();
 
   /* ---- Lenis + ScrollTrigger wiring ---- */
   useEffect(() => {
@@ -59,15 +63,30 @@ export default function App() {
     return () => triggers.forEach((t) => t.kill());
   }, []);
 
-  /* ---- Refresh ScrollTrigger on resize / content load ---- */
+  /* ---- Refresh ScrollTrigger on DOM layout mutations ---- */
   useEffect(() => {
-    // Recalc after async data loads shift section heights
+    // Debounce the refresh to avoid performance hits during rapid WebSocket updates
+    let timeoutId;
+    const debouncedRefresh = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 150); // 150ms debounce
+    };
+
+    // Watch for any layout height changes (e.g., from new live flows/alerts)
+    const resizeObserver = new ResizeObserver(() => {
+      debouncedRefresh();
+    });
+    resizeObserver.observe(document.body);
+
+    // Initial fallback
     const timer = setTimeout(() => ScrollTrigger.refresh(), 1500);
-    const onResize = () => ScrollTrigger.refresh();
-    window.addEventListener('resize', onResize);
+
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('resize', onResize);
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
     };
   }, []);
 
@@ -95,6 +114,7 @@ export default function App() {
   const scrollTo = useCallback((id) => {
     lenisRef.current?.scrollTo(`#${id}`, {
       duration: 1.2,
+      offset: -80, // Account for fixed navbar height
       easing: (t) => 1 - Math.pow(1 - t, 3),
     });
   }, []);
@@ -129,6 +149,9 @@ export default function App() {
 
   return (
     <div className="app-scroll-layout">
+      {/* Scroll progress bar — driven by ScrollTrigger global progress */}
+      <div className="scroll-progress-bar" />
+
       <MatrixIntro />
       <CyberCursor />
       <NetworkBackground />

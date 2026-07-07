@@ -144,16 +144,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Enhanced Charts Row */}
-            <motion.div
+            <div
                 className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
                 style={{ position: 'relative' }}
             >
                 {/* Live Traffic Chart with enhancements */}
                 <div
                     className="lg:col-span-2"
+                    data-chart-card
                     style={{ position: 'relative', zIndex: 1, height: '320px' }}
                 >
                     <div style={{
@@ -190,17 +188,16 @@ export default function DashboardPage() {
                 {/* App Distribution Chart */}
                 <div
                     className="lg:col-span-1"
+                    data-chart-card
                     style={{ height: '320px' }}
                 >
                     <AppPieChart stats={stats} />
                 </div>
-            </motion.div>
+            </div>
 
             {/* TOP THREATS SUMMARY Section */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
+            <div
+                data-overview-block
                 style={{
                     background: 'rgba(15, 17, 23, 0.6)',
                     border: '1px solid rgba(255,255,255,0.05)',
@@ -287,13 +284,11 @@ export default function DashboardPage() {
                         ✓ No active threats
                     </div>
                 )}
-            </motion.div>
+            </div>
 
             {/* SYSTEM STATUS Panel */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.7 }}
+            <div
+                data-overview-block
                 style={{
                     background: 'rgba(15, 17, 23, 0.6)',
                     border: '1px solid rgba(255,255,255,0.05)',
@@ -352,17 +347,15 @@ export default function DashboardPage() {
                         </div>
                     ))}
                 </div>
-            </motion.div>
+            </div>
 
             {/* Existing Flows Table */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.9 }}
+            <div
+                data-overview-block
                 style={{ display: "flex", flexDirection: "column", gap: 20 }}
             >
                 <FlowsTable flows={localFlows || []} compact />
-            </motion.div>
+            </div>
 
             </motion.div>
     );
