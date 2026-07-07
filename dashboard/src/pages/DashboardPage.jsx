@@ -13,6 +13,7 @@ import StatsCards from "../components/StatsCards";
 import LiveTrafficChart from "../components/LiveTrafficChart";
 import AppPieChart from "../components/AppPieChart";
 import FlowsTable from "../components/FlowsTable";
+import { API_BASE, API_KEY } from "../config";
 
 export default function DashboardPage() {
     const { stats, flows, alerts, chartData, loading } = useDPI();
@@ -22,8 +23,8 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchFlows = async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/flows?limit=5`, {
-                    headers: { 'X-API-Key': import.meta.env.VITE_API_KEY || 'dev_key_12345' }
+                const res = await fetch(`${API_BASE}/flows?limit=5`, {
+                    headers: { 'X-API-Key': API_KEY }
                 });
                 const data = await res.json();
                 const flowList = Array.isArray(data) ? data : (data.data ?? []);
