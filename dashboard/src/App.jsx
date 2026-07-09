@@ -6,6 +6,7 @@ import CyberCursor from "./components/effects/CyberCursor";
 import NetworkBackground from "./components/effects/NetworkBackground";
 import GlitchText from "./components/effects/GlitchText";
 import AlertToast from "./components/effects/AlertToast";
+import Preloader from "./components/effects/Preloader";
 import MatrixIntro from "./components/effects/MatrixIntro";
 import { useState, useEffect, useRef, useCallback } from 'react';
 import gsap from 'gsap';
@@ -149,6 +150,7 @@ export default function App() {
 
   return (
     <div className="app-scroll-layout">
+      <Preloader />
       {/* Scroll progress bar — driven by ScrollTrigger global progress */}
       <div className="scroll-progress-bar" />
 
