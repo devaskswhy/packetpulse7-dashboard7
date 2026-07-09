@@ -1,13 +1,17 @@
 import { useEffect, useRef } from 'react';
+import { ACCENT } from '../../lib/motion';
 
 export default function NetworkBackground() {
   const canvasRef = useRef(null);
   
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let animId;
-    
+    let lastTime = 0;
+    const fpsInterval = 1000 / 30; // Cap at 30 FPS
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -15,87 +19,64 @@ export default function NetworkBackground() {
     resize();
     window.addEventListener('resize', resize);
     
-    // Mouse tracking
-    const mouse = { x: -1000, y: -1000 };
-    window.addEventListener('mousemove', e => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    });
-    
-    // Create particles - REDUCED to 35
+    // Create ~35 slow-drifting particles
     const particles = Array.from({ length: 35 }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
+      vx: (Math.random() - 0.5) * 0.2, // Very slow drift
+      vy: (Math.random() - 0.5) * 0.2,
       size: Math.random() * 1.5 + 0.5,
-      opacity: Math.random() * 0.3 + 0.2,
+      // Opacity between 0.08 and 0.15
+      opacity: Math.random() * 0.07 + 0.08,
     }));
     
-    let frame = 0;
+    // Convert hex ACCENT to rgb for rgba usage
+    // ACCENT is '#0d9488'
+    let rgb = '13, 148, 136';
+    if (ACCENT.startsWith('#')) {
+      const hex = ACCENT.replace('#', '');
+      const bigint = parseInt(hex, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      rgb = `${r}, ${g}, ${b}`;
+    }
     
-    const animate = () => {
-      frame++;
+    const animate = (time) => {
+      animId = requestAnimationFrame(animate);
+      
+      // Pause if tab is hidden to save CPU
+      if (document.hidden) return;
+      
+      // Manual 30fps timing
+      const elapsed = time - lastTime;
+      if (elapsed < fpsInterval) return;
+      
+      // Adjust lastTime to maintain precise FPS
+      lastTime = time - (elapsed % fpsInterval);
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Always move particles
       particles.forEach(p => {
-        // Mouse repulsion
-        const dx = p.x - mouse.x;
-        const dy = p.y - mouse.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 150) {
-          p.vx += (dx / dist) * 0.3;
-          p.vy += (dy / dist) * 0.3;
-        }
-        
-        // Speed limit
-        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-        if (speed > 1.5) {
-          p.vx = (p.vx / speed) * 1.5;
-          p.vy = (p.vy / speed) * 1.5;
-        }
-        
         p.x += p.vx;
         p.y += p.vy;
         
-        // Bounce
-        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        // Wrap around instead of bouncing for a continuous infinite flow
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
         
         // Draw dot
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(34, 211, 238, ${p.opacity})`;
+        ctx.fillStyle = `rgba(${rgb}, ${p.opacity})`;
         ctx.fill();
       });
-      
-      // Draw connections only every 3rd frame
-      if (frame % 3 === 0) {
-        for (let i = 0; i < particles.length; i++) {
-          for (let j = i + 1; j < particles.length; j++) {
-            // Skip 70% of connection checks for performance
-            if (Math.random() > 0.3) continue;
-            
-            const dx = particles[i].x - particles[j].x;
-            const dy = particles[i].y - particles[j].y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 80) {
-              ctx.beginPath();
-              ctx.moveTo(particles[i].x, particles[i].y);
-              ctx.lineTo(particles[j].x, particles[j].y);
-              ctx.strokeStyle = `rgba(34, 211, 238, ${0.1 * (1 - dist/80)})`;
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
-          }
-        }
-      }
-      
-      animId = requestAnimationFrame(animate);
     };
     
-    animate();
+    animId = requestAnimationFrame(animate);
+    
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', resize);
