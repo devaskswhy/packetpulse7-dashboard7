@@ -4,7 +4,6 @@ import AlertsPage from "./pages/AlertsPage";
 import { useDPI } from "./context/DPIContext";
 import CyberCursor from "./components/effects/CyberCursor";
 import NetworkBackground from "./components/effects/NetworkBackground";
-import GlitchText from "./components/effects/GlitchText";
 import AlertToast from "./components/effects/AlertToast";
 import Preloader from "./components/effects/Preloader";
 import MatrixIntro from "./components/effects/MatrixIntro";
@@ -160,14 +159,6 @@ export default function App() {
 
       {/* ---- Fixed Top Navbar ---- */}
       <nav className="topnav" id="topnav">
-        {/* Brand */}
-        <div className="topnav-brand">
-          <div className="topnav-brand-icon">PP</div>
-          <div className="topnav-brand-text">
-            <GlitchText text="PacketPulse" className="font-bold text-sm" />
-          </div>
-        </div>
-
         {/* Nav links */}
         <div className="topnav-links">
           {SECTIONS.map((s) => (

@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
 import { useDPI } from '../../context/DPIContext';
-import { ACCENT } from '../../lib/motion';
+import { ACCENT, DURATION, EASE_SOFT } from '../../lib/motion';
+import GlitchText from './GlitchText';
 
 export default function Preloader() {
   const { connectionStatus } = useDPI();
@@ -11,9 +12,19 @@ export default function Preloader() {
   
   const containerRef = useRef(null);
   const contentRef = useRef(null);
+  const logoRef = useRef(null);
   
   const startTime = useRef(Date.now());
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    // Initial enter animation for logo
+    gsap.fromTo(
+      logoRef.current,
+      { opacity: 0, scale: 0.9 },
+      { opacity: 1, scale: 1, duration: DURATION.base, ease: EASE_SOFT, delay: 0.1 }
+    );
+  }, []);
 
   useEffect(() => {
     // Fake progress
@@ -84,6 +95,42 @@ export default function Preloader() {
       }}
     >
       <div ref={contentRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* PacketPulse Logo */}
+        <div 
+          ref={logoRef}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            marginBottom: '48px',
+            opacity: 0, // initially hidden for gsap to pick up
+          }}
+        >
+          <div style={{
+            width: '80px',
+            height: '80px',
+            background: `linear-gradient(135deg, ${ACCENT}, var(--bg-card, #111827))`,
+            borderRadius: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '32px',
+            fontWeight: 800,
+            color: '#fff',
+            boxShadow: 'var(--shadow-glow-accent)',
+          }}>
+            PP
+          </div>
+          <div style={{
+            fontSize: '28px',
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+          }}>
+            <GlitchText text="PacketPulse" className="font-bold" />
+          </div>
+        </div>
+
         <div 
           style={{ 
             fontFamily: '"JetBrains Mono", "Fira Code", monospace',
