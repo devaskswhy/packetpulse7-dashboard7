@@ -19,7 +19,7 @@ export default function AppDistributionChart() {
   return (
     <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-4 md:p-6 w-full h-[400px]">
       <div className="mb-2">
-        <h3 className="text-sm font-bold text-[#e2e8f0]">Top Applications</h3>
+        <h3 className="panel-title">Top Applications</h3>
         <p className="text-xs text-[#94a3b8]">By volume (bytes)</p>
       </div>
       <ResponsiveContainer width="100%" height="85%">

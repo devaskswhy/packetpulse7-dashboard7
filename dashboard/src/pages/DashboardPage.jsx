@@ -213,13 +213,7 @@ export default function DashboardPage() {
                     alignItems: 'center',
                     marginBottom: '12px'
                 }}>
-                    <h3 style={{
-                        color: '#ef4444',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        margin: 0,
-                        letterSpacing: '0.05em'
-                    }}>
+                    <h3 className="panel-title" style={{ color: '#ef4444' }}>
                         TOP THREATS SUMMARY
                     </h3>
                     <a
@@ -301,13 +295,7 @@ export default function DashboardPage() {
                     marginBottom: '20px'
                 }}
             >
-                <h3 style={{
-                    color: '#22d3ee',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    margin: '0 0 12px 0',
-                    letterSpacing: '0.05em'
-                }}>
+                <h3 className="panel-title" style={{ color: 'var(--accent)', marginBottom: '12px' }}>
                     SYSTEM STATUS
                 </h3>
                 

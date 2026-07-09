@@ -11,7 +11,7 @@ function LiveTrafficChart({ chartData }) {
     <div style={{ width: '100%', height: 280 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', marginTop: '-8px' }}>
         <div>
-          <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#e2e8f0' }}>Live Traffic</h3>
+          <h3 className="panel-title">Live Traffic</h3>
           <p style={{ fontSize: '12px', color: '#94a3b8' }}>Real-time bytes and packets per second</p>
         </div>
       </div>

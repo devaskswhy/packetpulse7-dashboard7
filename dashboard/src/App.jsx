@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import { ACCENT } from './lib/motion';
+import { ACCENT, DURATION, EASE_SOFT } from './lib/motion';
 import { useScrollAnimations } from './hooks/useScrollAnimations';
 
 /* ---- Section definitions ---- */
@@ -106,8 +106,8 @@ export default function App() {
     gsap.to(indicator, {
       x: linkRect.left - navRect.left,
       width: linkRect.width,
-      duration: 0.4,
-      ease: 'power3.out',
+      duration: DURATION.fast,
+      ease: EASE_SOFT,
     });
   }, [activeSection]);
 

@@ -23,7 +23,7 @@ export default function AlertsStream({ limit = 20, showHeader = true }) {
     <div className={`bg-[#111827] border border-[#1e293b] rounded-xl ${showHeader ? 'p-4 md:p-6 w-full flex flex-col h-[400px]' : 'p-2 w-full flex flex-col h-full'}`}>
       {showHeader && (
         <div className="mb-4 flex-shrink-0">
-          <h3 className="text-sm font-bold text-[#e2e8f0]">Live Alerts Stream</h3>
+          <h3 className="panel-title">Live Alerts Stream</h3>
           <p className="text-xs text-[#94a3b8]">Latest security events</p>
         </div>
       )}

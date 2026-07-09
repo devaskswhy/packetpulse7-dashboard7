@@ -51,7 +51,7 @@ export default function RulesPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="mb-2">
-        <h2 className="text-xl font-bold text-[#e2e8f0] flex items-center gap-2">
+        <h2 className="section-title flex items-center gap-2" style={{ margin: 0 }}>
           <Shield className="w-5 h-5 text-[#22d3ee]" />
           Detection Rules Engine
         </h2>
