@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ViewportFreezer from "../components/effects/ViewportFreezer";
 import { API_KEY, API_BASE } from "../config";
 
 const SEVERITY_COLORS = {
@@ -340,131 +341,135 @@ export default function AlertsPage() {
         layout
         style={{ marginBottom: "20px" }}
       >
-        <AnimatePresence>
-          {paginatedAlerts.map((alert, index) => {
-            const severity = getSeverity(alert.type);
-            const isCritical = severity === "critical";
-            const color = getSeverityColor(severity);
+        <ViewportFreezer dataProps={{ alerts: paginatedAlerts }} threshold={0}>
+          {({ alerts }) => (
+            <AnimatePresence>
+              {alerts.map((alert, index) => {
+                const severity = getSeverity(alert.type);
+                const isCritical = severity === "critical";
+                const color = getSeverityColor(severity);
 
-            return (
-              <motion.div
-                key={`${alert.ts || index}-${alert.ip || index}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                transition={{ 
-                  duration: 0.3, 
-                  delay: index * 0.05,
-                  layout: { duration: 0.3 }
-                }}
-                layout
-                style={{
-                  background: "rgba(15, 17, 23, 0.8)",
-                  border: "1px solid rgba(255,255,255,0.05)",
-                  borderLeft: `4px solid ${color}`,
-                  borderRadius: "8px",
-                  padding: "16px",
-                  marginBottom: "12px",
-                  position: "relative",
-                  ...(isCritical && {
-                    boxShadow: `0 0 20px ${color}40`,
-                    transform: "scale(1.02)"
-                  })
-                }}
-              >
-                {/* Critical Alert Special Treatment */}
-                {isCritical && (
-                  <div style={{
-                    position: "absolute",
-                    top: "-8px",
-                    left: "-4px",
-                    background: "#ef4444",
-                    color: "#fff",
-                    padding: "2px 8px",
-                    borderRadius: "4px",
-                    fontSize: "10px",
-                    fontWeight: "700",
-                    animation: "pulse 2s ease-in-out infinite"
-                  }}>
-                    ⚠ CRITICAL THREAT
-                  </div>
-                )}
+                return (
+                  <motion.div
+                    key={`${alert.ts || index}-${alert.ip || index}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ 
+                      duration: 0.3, 
+                      delay: index * 0.05,
+                      layout: { duration: 0.3 }
+                    }}
+                    layout
+                    style={{
+                      background: "rgba(15, 17, 23, 0.8)",
+                      border: "1px solid rgba(255,255,255,0.05)",
+                      borderLeft: `4px solid ${color}`,
+                      borderRadius: "8px",
+                      padding: "16px",
+                      marginBottom: "12px",
+                      position: "relative",
+                      ...(isCritical && {
+                        boxShadow: `0 0 20px ${color}40`,
+                        transform: "scale(1.02)"
+                      })
+                    }}
+                  >
+                    {/* Critical Alert Special Treatment */}
+                    {isCritical && (
+                      <div style={{
+                        position: "absolute",
+                        top: "-8px",
+                        left: "-4px",
+                        background: "#ef4444",
+                        color: "#fff",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        fontSize: "10px",
+                        fontWeight: "700",
+                        animation: "pulse 2s ease-in-out infinite"
+                      }}>
+                        ⚠ CRITICAL THREAT
+                      </div>
+                    )}
 
-                {/* Top Row */}
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "8px"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{
-                      background: color,
-                      color: "#fff",
-                      padding: "2px 6px",
-                      borderRadius: "2px",
-                      fontSize: "10px",
-                      fontWeight: "600"
+                    {/* Top Row */}
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "8px"
                     }}>
-                      {severity.toUpperCase()}
-                    </span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300 w-24 flex-shrink-0">
-                      [{(alert.type || 'UNKNOWN').toUpperCase()}]
-                    </span>
-                    <span style={{
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{
+                          background: color,
+                          color: "#fff",
+                          padding: "2px 6px",
+                          borderRadius: "2px",
+                          fontSize: "10px",
+                          fontWeight: "600"
+                        }}>
+                          {severity.toUpperCase()}
+                        </span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-300 w-24 flex-shrink-0">
+                          [{(alert.type || 'UNKNOWN').toUpperCase()}]
+                        </span>
+                        <span style={{
+                          color: "#e2e8f0",
+                          fontSize: "12px",
+                          fontWeight: "600"
+                        }}>
+                          {alert.type?.toUpperCase() || "UNKNOWN"}
+                        </span>
+                      </div>
+                      <span style={{ color: "#64748b", fontSize: "10px" }}>
+                        {formatTime(alert.ts)}
+                      </span>
+                    </div>
+
+                    {/* Middle Row */}
+                    <div style={{
                       color: "#e2e8f0",
-                      fontSize: "12px",
-                      fontWeight: "600"
+                      fontSize: "14px",
+                      marginBottom: "12px",
+                      lineHeight: "1.4"
                     }}>
-                      {alert.type?.toUpperCase() || "UNKNOWN"}
-                    </span>
-                  </div>
-                  <span style={{ color: "#64748b", fontSize: "10px" }}>
-                    {formatTime(alert.ts)}
-                  </span>
-                </div>
+                      ⚡ {alert.reason || "Security event detected"}
+                    </div>
 
-                {/* Middle Row */}
-                <div style={{
-                  color: "#e2e8f0",
-                  fontSize: "14px",
-                  marginBottom: "12px",
-                  lineHeight: "1.4"
-                }}>
-                  ⚡ {alert.reason || "Security event detected"}
-                </div>
-
-                {/* Bottom Row */}
-                <div style={{
-                  display: "flex",
-                  gap: "16px",
-                  fontSize: "11px",
-                  color: "#64748b"
-                }}>
-                  <span>
-                    SRC: <span style={{ color: "#22d3ee", fontFamily: "monospace" }}>
-                      {alert.ip || "Unknown"}
-                    </span>
-                  </span>
-                  {alert.dst_ip && (
-                    <span>
-                      DST: <span style={{ color: "#22d3ee", fontFamily: "monospace" }}>
-                        {alert.dst_ip}
+                    {/* Bottom Row */}
+                    <div style={{
+                      display: "flex",
+                      gap: "16px",
+                      fontSize: "11px",
+                      color: "#64748b"
+                    }}>
+                      <span>
+                        SRC: <span style={{ color: "#22d3ee", fontFamily: "monospace" }}>
+                          {alert.ip || "Unknown"}
+                        </span>
                       </span>
-                    </span>
-                  )}
-                  {alert.flow_id && (
-                    <span>
-                      FLOW: <span style={{ color: "#64748b", fontFamily: "monospace" }}>
-                        {alert.flow_id.substring(0, 12)}
-                      </span>
-                    </span>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+                      {alert.dst_ip && (
+                        <span>
+                          DST: <span style={{ color: "#22d3ee", fontFamily: "monospace" }}>
+                            {alert.dst_ip}
+                          </span>
+                        </span>
+                      )}
+                      {alert.flow_id && (
+                        <span>
+                          FLOW: <span style={{ color: "#64748b", fontFamily: "monospace" }}>
+                            {alert.flow_id.substring(0, 12)}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          )}
+        </ViewportFreezer>
       </motion.div>
 
       {/* Pagination */}

@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ViewportFreezer from "../components/effects/ViewportFreezer";
 import { API_KEY, API_BASE } from "../config";
 
 const APP_COLORS = {
@@ -312,125 +313,131 @@ export default function FlowsPage() {
 
       {/* Flow Table */}
       <div style={{ marginBottom: "20px" }}>
-        {filteredFlows.map((flow, index) => (
-          <div
-            key={`${flow.flow_id || index}-${lastSync.getTime()}`}
-            style={{
-              background: flow.blocked ? "rgba(239, 68, 68, 0.05)" : "rgba(0, 0, 0, 0.3)",
-              borderLeft: flow.blocked ? "3px solid #ef4444" : "3px solid transparent",
-              borderRadius: "4px",
-              padding: "12px 16px",
-              marginBottom: "8px",
-              display: "grid",
-              gridTemplateColumns: "40px 80px 140px 140px 100px 60px 80px 80px 80px",
-              gap: "12px",
-              alignItems: "center",
-              fontSize: "12px",
-              cursor: "pointer",
-              transition: "all 0.2s ease"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderLeftColor = "#22d3ee";
-              e.currentTarget.style.background = "rgba(34, 211, 238, 0.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderLeftColor = flow.blocked ? "#ef4444" : "transparent";
-              e.currentTarget.style.background = flow.blocked ? "rgba(239, 68, 68, 0.05)" : "rgba(0, 0, 0, 0.3)";
-            }}
-          >
-            {/* # */}
-            <div style={{ color: "#64748b" }}>{index + 1}</div>
-            
-            {/* Flow ID */}
-            <div style={{ 
-              color: "#64748b", 
-              fontFamily: "monospace",
-              fontSize: "11px"
-            }}>
-              {(flow.flow_id || "unknown").substring(0, 8)}
-            </div>
-            
-            {/* Source */}
-            <div style={{ 
-              color: "#22d3ee", 
-              fontFamily: "monospace",
-              fontSize: "11px"
-            }}>
-              {flow.src_ip || "0.0.0.0"}:{flow.src_port || "--"}
-            </div>
-            
-            {/* Destination */}
-            <div style={{ 
-              color: "#fff", 
-              fontFamily: "monospace",
-              fontSize: "11px"
-            }}>
-              {flow.dst_ip || "0.0.0.0"}:{flow.dst_port || "--"}
-            </div>
-            
-            {/* App */}
-            <div>
-              <span style={{
-                background: getAppColor(flow.app),
-                color: "#fff",
-                padding: "2px 6px",
-                borderRadius: "2px",
-                fontSize: "10px",
-                fontWeight: "600"
-              }}>
-                {flow.app || "Unknown"}
-              </span>
-            </div>
-            
-            {/* Protocol */}
-            <div>
-              <span style={{
-                background: flow.protocol === "tcp" ? "#3b82f6" : 
-                          flow.protocol === "udp" ? "#10b981" : "#6b7280",
-                color: "#fff",
-                padding: "2px 6px",
-                borderRadius: "2px",
-                fontSize: "10px",
-                fontWeight: "600"
-              }}>
-                {flow.protocol?.toUpperCase() || "UNKNOWN"}
-              </span>
-            </div>
-            
-            {/* Bytes */}
-            <div style={{ color: "#94a3b8" }}>
-              {formatBytes(flow.bytes)}
-            </div>
-            
-            {/* Duration */}
-            <div style={{ color: "#94a3b8" }}>
-              {formatDuration(flow.duration)}
-            </div>
-            
-            {/* Status */}
-            <div>
-              {flow.blocked ? (
-                <span style={{
-                  background: "#ef4444",
-                  color: "#fff",
-                  padding: "2px 6px",
-                  borderRadius: "2px",
-                  fontSize: "10px",
-                  fontWeight: "600"
-                }}>
-                  ⚠️ BLOCKED
-                </span>
-              ) : (
-                <span style={{
-                  color: "#10b981",
-                  fontSize: "12px"
-                }}>
-                  ● ALLOWED
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+        <ViewportFreezer dataProps={{ flows: filteredFlows }} threshold={0}>
+          {({ flows }) => (
+            <>
+              {flows.map((flow, index) => (
+                <div
+                  key={`${flow.flow_id || index}-${lastSync.getTime()}`}
+                  style={{
+                    background: flow.blocked ? "rgba(239, 68, 68, 0.05)" : "rgba(0, 0, 0, 0.3)",
+                    borderLeft: flow.blocked ? "3px solid #ef4444" : "3px solid transparent",
+                    borderRadius: "4px",
+                    padding: "12px 16px",
+                    marginBottom: "8px",
+                    display: "grid",
+                    gridTemplateColumns: "40px 80px 140px 140px 100px 60px 80px 80px 80px",
+                    gap: "12px",
+                    alignItems: "center",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderLeftColor = "#22d3ee";
+                    e.currentTarget.style.background = "rgba(34, 211, 238, 0.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderLeftColor = flow.blocked ? "#ef4444" : "transparent";
+                    e.currentTarget.style.background = flow.blocked ? "rgba(239, 68, 68, 0.05)" : "rgba(0, 0, 0, 0.3)";
+                  }}
+                >
+                  {/* # */}
+                  <div style={{ color: "#64748b" }}>{index + 1}</div>
+                  
+                  {/* Flow ID */}
+                  <div style={{ 
+                    color: "#64748b", 
+                    fontFamily: "monospace",
+                    fontSize: "11px"
+                  }}>
+                    {(flow.flow_id || "unknown").substring(0, 8)}
+                  </div>
+                  
+                  {/* Source */}
+                  <div style={{ 
+                    color: "#22d3ee", 
+                    fontFamily: "monospace",
+                    fontSize: "11px"
+                  }}>
+                    {flow.src_ip || "0.0.0.0"}:{flow.src_port || "--"}
+                  </div>
+                  
+                  {/* Destination */}
+                  <div style={{ 
+                    color: "#fff", 
+                    fontFamily: "monospace",
+                    fontSize: "11px"
+                  }}>
+                    {flow.dst_ip || "0.0.0.0"}:{flow.dst_port || "--"}
+                  </div>
+                  
+                  {/* App */}
+                  <div>
+                    <span style={{
+                      background: getAppColor(flow.app),
+                      color: "#fff",
+                      padding: "2px 6px",
+                      borderRadius: "2px",
+                      fontSize: "10px",
+                      fontWeight: "600"
+                    }}>
+                      {flow.app || "Unknown"}
+                    </span>
+                  </div>
+                  
+                  {/* Protocol */}
+                  <div>
+                    <span style={{
+                      background: flow.protocol === "tcp" ? "#3b82f6" : 
+                                flow.protocol === "udp" ? "#10b981" : "#6b7280",
+                      color: "#fff",
+                      padding: "2px 6px",
+                      borderRadius: "2px",
+                      fontSize: "10px",
+                      fontWeight: "600"
+                    }}>
+                      {flow.protocol?.toUpperCase() || "UNKNOWN"}
+                    </span>
+                  </div>
+                  
+                  {/* Bytes */}
+                  <div style={{ color: "#94a3b8" }}>
+                    {formatBytes(flow.bytes)}
+                  </div>
+                  
+                  {/* Duration */}
+                  <div style={{ color: "#94a3b8" }}>
+                    {formatDuration(flow.duration)}
+                  </div>
+                  
+                  {/* Status */}
+                  <div>
+                    {flow.blocked ? (
+                      <span style={{
+                        background: "#ef4444",
+                        color: "#fff",
+                        padding: "2px 6px",
+                        borderRadius: "2px",
+                        fontSize: "10px",
+                        fontWeight: "600"
+                      }}>
+                        ⚠️ BLOCKED
+                      </span>
+                    ) : (
+                      <span style={{
+                        color: "#10b981",
+                        fontSize: "12px"
+                      }}>
+                        ● ALLOWED
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </ViewportFreezer>
       </div>
 
       {/* Stats Bar */}

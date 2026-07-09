@@ -13,6 +13,7 @@ import StatsCards from "../components/StatsCards";
 import LiveTrafficChart from "../components/LiveTrafficChart";
 import AppPieChart from "../components/AppPieChart";
 import FlowsTable from "../components/FlowsTable";
+import ViewportFreezer from "../components/effects/ViewportFreezer";
 import { API_BASE, API_KEY } from "../config";
 
 export default function DashboardPage() {
@@ -183,7 +184,11 @@ export default function DashboardPage() {
                         </span>
                     </div>
                     
-                    <LiveTrafficChart chartData={chartData} />
+                    <ViewportFreezer dataProps={{ chartData }} threshold={0}>
+                        {({ chartData }) => (
+                            <LiveTrafficChart chartData={chartData} />
+                        )}
+                    </ViewportFreezer>
                 </div>
 
                 {/* App Distribution Chart */}
@@ -192,7 +197,11 @@ export default function DashboardPage() {
                     data-chart-card
                     style={{ height: '320px' }}
                 >
-                    <AppPieChart stats={stats} />
+                    <ViewportFreezer dataProps={{ stats }} threshold={0}>
+                        {({ stats }) => (
+                            <AppPieChart stats={stats} />
+                        )}
+                    </ViewportFreezer>
                 </div>
             </div>
 
@@ -346,7 +355,11 @@ export default function DashboardPage() {
                 data-overview-block
                 style={{ display: "flex", flexDirection: "column", gap: 20 }}
             >
-                <FlowsTable flows={localFlows || []} compact />
+                <ViewportFreezer dataProps={{ flows: localFlows || [] }} threshold={0}>
+                    {({ flows }) => (
+                        <FlowsTable flows={flows} compact />
+                    )}
+                </ViewportFreezer>
             </div>
 
             </motion.div>

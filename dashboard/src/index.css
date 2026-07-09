@@ -245,7 +245,8 @@ a {
   bottom: -1px;
   left: 0;
   height: 2px;
-  width: 0;
+  width: 1px;
+  transform-origin: left center;
   background: var(--accent);
   border-radius: 1px;
   box-shadow: 0 0 8px rgba(13, 148, 136, 0.5);

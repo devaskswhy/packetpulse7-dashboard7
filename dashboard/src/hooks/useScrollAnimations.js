@@ -92,6 +92,8 @@ export function useScrollAnimations() {
               y: 0,
               duration: DURATION.base,
               ease: EASE,
+              onStart: () => gsap.set(titleBar, { willChange: 'transform, opacity' }),
+              onComplete: () => gsap.set(titleBar, { willChange: 'auto' })
             });
           }
 
@@ -105,6 +107,8 @@ export function useScrollAnimations() {
                 duration: DURATION.base,
                 ease: EASE_SOFT,
                 stagger: 0.12,
+                onStart: () => gsap.set(regularChildren, { willChange: 'transform, opacity' }),
+                onComplete: () => gsap.set(regularChildren, { willChange: 'auto' })
               },
               titleBar ? 0.15 : 0
             );
@@ -121,6 +125,8 @@ export function useScrollAnimations() {
                 duration: DURATION.base,
                 ease: EASE_SOFT,
                 stagger: 0.12,
+                onStart: () => gsap.set(chartChildren, { willChange: 'transform, opacity' }),
+                onComplete: () => gsap.set(chartChildren, { willChange: 'auto' })
               },
               titleBar ? 0.15 : 0
             );
@@ -183,6 +189,8 @@ export function useScrollAnimations() {
               y: 0,
               duration: DURATION.base,
               ease: EASE,
+              onStart: () => gsap.set(titleBar, { willChange: 'transform, opacity' }),
+              onComplete: () => gsap.set(titleBar, { willChange: 'auto' })
             });
           }
 
@@ -196,6 +204,8 @@ export function useScrollAnimations() {
                 duration: DURATION.base,
                 ease: EASE_SOFT,
                 stagger: 0.12,
+                onStart: () => gsap.set(statCards, { willChange: 'transform, opacity' }),
+                onComplete: () => gsap.set(statCards, { willChange: 'auto' })
               },
               titleBar ? 0.15 : 0
             );
@@ -212,6 +222,8 @@ export function useScrollAnimations() {
                 duration: DURATION.base,
                 ease: EASE_SOFT,
                 stagger: 0.12,
+                onStart: () => gsap.set(chartCards, { willChange: 'transform, opacity' }),
+                onComplete: () => gsap.set(chartCards, { willChange: 'auto' })
               },
               titleBar ? 0.3 : 0.15
             );
@@ -227,6 +239,8 @@ export function useScrollAnimations() {
                 duration: DURATION.base,
                 ease: EASE_SOFT,
                 stagger: 0.12,
+                onStart: () => gsap.set(otherSections, { willChange: 'transform, opacity' }),
+                onComplete: () => gsap.set(otherSections, { willChange: 'auto' })
               },
               '-=0.3'
             );

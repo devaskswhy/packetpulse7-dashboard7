@@ -104,7 +104,7 @@ export default function App() {
 
     gsap.to(indicator, {
       x: linkRect.left - navRect.left,
-      width: linkRect.width,
+      scaleX: linkRect.width,
       duration: DURATION.fast,
       ease: EASE_SOFT,
     });
