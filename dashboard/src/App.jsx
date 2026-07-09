@@ -16,9 +16,9 @@ import { useScrollAnimations } from './hooks/useScrollAnimations';
 
 /* ---- Section definitions ---- */
 const SECTIONS = [
-  { id: "overview",  label: "Overview",       icon: "📊" },
-  { id: "flows",     label: "Live Flows",     icon: "🔀" },
-  { id: "alerts",    label: "Active Alerts",  icon: "🔔" },
+  { id: "overview",  label: "Overview",       icon: "-" },
+  { id: "flows",     label: "Live Flows",     icon: "-" },
+  { id: "alerts",    label: "Active Alerts",  icon: "-" },
 ];
 
 export default function App() {
