@@ -31,10 +31,12 @@ app = FastAPI(title="PacketPulse Demo API")
 
 # Groq Setup
 load_dotenv()
+groq_api_key = os.environ.get("GROQ_API_KEY", "").strip()
 try:
-    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
-except Exception:
+    groq_client = Groq(api_key=groq_api_key) if groq_api_key else None
+except Exception as e:
     groq_client = None
+    print(f"Groq Init Error: {e}")
 
 AI_CACHE = {"text": None, "ts": 0, "generated_at": ""}
 RATE_LIMITS = defaultdict(list)
@@ -341,7 +343,8 @@ async def post_ai_ask(request: Request):
     stats = current_stats()
     
     if not groq_client:
-        return {"answer": "I'm sorry, my AI backend is currently offline. Please check the GROQ_API_KEY."}
+        key_status = "present" if groq_api_key else "missing"
+        return {"answer": f"I'm sorry, my AI backend is currently offline. Key status: {key_status}."}
         
     system_prompt = """
     You are a network security assistant. Answer questions ONLY using the provided flow/alert data.
