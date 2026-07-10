@@ -340,8 +340,8 @@ async def post_ai_ask(request: Request):
     except Exception:
         question = ""
     
-    recent_alerts = list(ALERTS)[:30]
-    recent_flows = list(FLOWS.values())[:20]
+    recent_alerts = list(ALERTS)[:10]
+    recent_flows = list(FLOWS.values())[:5]
     stats = current_stats()
     
     if not groq_client:
