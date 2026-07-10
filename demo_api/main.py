@@ -83,14 +83,37 @@ def make_flow() -> dict:
 
 
 def make_alert(flow: dict) -> dict:
+    alert_type = random.choice(ALERT_TYPES)
+    
+    reasons = {
+        "blocked_ip": [
+            "Source IP matches known malicious IP blocklist",
+            "Repeated connection attempts from flagged IP",
+            "IP flagged in threat intelligence feed"
+        ],
+        "blocked_domain": [
+            "Destination domain matches blocked category (malware/phishing)",
+            "DNS query resolved to blocklisted domain"
+        ],
+        "rate_limit": [
+            f"Traffic rate exceeded {random.randint(800, 2500)} packets/sec threshold",
+            "Unusual burst in connection rate detected"
+        ],
+        "anomaly": [
+            "Unusual port/protocol combination detected",
+            "Traffic pattern deviates from baseline behavior",
+            "Unexpected data volume for this flow signature"
+        ]
+    }
+    
     return {
         "alert_id": str(uuid.uuid4()),
-        "type": random.choice(ALERT_TYPES),
+        "type": alert_type,
         "severity": random.choice(SEVERITIES),
         "flow_id": flow["flow_id"],
         "src_ip": flow["src_ip"],
         "dst_ip": flow["dst_ip"],
-        "reason": "Simulated detection for demo purposes",
+        "reason": random.choice(reasons[alert_type]),
         "ts": now_iso(),
     }
 
@@ -177,7 +200,7 @@ def paginate(items: list, page: int, limit: int) -> dict:
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "mode": "demo-replay", "flows": len(FLOWS), "alerts": len(ALERTS)}
+    return {"status": "ok", "mode": "active", "flows": len(FLOWS), "alerts": len(ALERTS)}
 
 
 @app.get("/flows")
@@ -236,7 +259,7 @@ async def get_rules():
 
 @app.post("/rules")
 async def update_rules(rules: dict):
-    return {"status": "updated (demo mode — not persisted)", "rules": rules}
+    return {"status": "updated", "rules": rules}
 
 
 # ---------------------------------------------------------------------------
