@@ -319,7 +319,7 @@ async def get_ai_briefing():
         AI_CACHE["generated_at"] = now_iso()
         return {"briefing": briefing, "generated_at": AI_CACHE["generated_at"]}
     except Exception as e:
-        fallback = f"Rule-based summary: {len(recent_alerts)} recent alerts. Traffic volume at {stats['total_bytes']} bytes."
+        fallback = f"Rule-based summary: {len(recent_alerts)} recent alerts. Traffic volume at {stats['total_bytes']} bytes. Error: {str(e)}"
         return {"briefing": fallback, "generated_at": now_iso()}
 
 @app.post("/ai/ask")
@@ -373,7 +373,7 @@ async def post_ai_ask(request: Request):
         )
         return {"answer": completion.choices[0].message.content.strip()}
     except Exception as e:
-        return {"answer": "I'm currently experiencing a connection issue with my AI provider. Please try again later."}
+        return {"answer": f"I'm currently experiencing a connection issue with my AI provider. Please try again later. Error: {str(e)}"}
 
 
 # ---------------------------------------------------------------------------
