@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 import os
 import json
 from groq import Groq
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,6 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="PacketPulse Demo API")
 
 # Groq Setup
+load_dotenv()
 try:
     groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 except Exception:
