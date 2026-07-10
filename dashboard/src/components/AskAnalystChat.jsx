@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE, API_KEY } from '../config';
-import { MessageSquare, X, Send, BrainCircuit } from 'lucide-react';
+import { MessageSquare, X, Send, BrainCircuit, Maximize2, Minimize2 } from 'lucide-react';
 
 export default function AskAnalystChat() {
     const [isOpen, setIsOpen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
     const [messages, setMessages] = useState([
         { role: 'assistant', text: 'Hello! I am your AI SOC Analyst. Ask me anything about the recent traffic and alerts.' }
     ]);
@@ -57,8 +58,10 @@ export default function AskAnalystChat() {
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
                         style={{
-                            width: '350px',
-                            height: '450px',
+                            width: isExpanded ? '50vw' : '350px',
+                            height: isExpanded ? '70vh' : '450px',
+                            minWidth: '350px',
+                            minHeight: '450px',
                             background: 'rgba(15, 17, 23, 0.95)',
                             border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: '12px',
@@ -83,13 +86,18 @@ export default function AskAnalystChat() {
                                 <BrainCircuit size={18} color="#a855f7" />
                                 Ask the Analyst
                             </div>
-                            <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-                                <X size={18} />
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <button onClick={() => setIsExpanded(!isExpanded)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                    {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                                </button>
+                                <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                    <X size={18} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Messages */}
-                        <div style={{
+                        <div className="chat-scroll" style={{
                             flex: 1,
                             padding: '16px',
                             overflowY: 'auto',
