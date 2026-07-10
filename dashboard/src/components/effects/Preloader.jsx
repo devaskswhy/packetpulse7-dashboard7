@@ -98,7 +98,8 @@ export default function Preloader() {
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setProgress((prev) => {
-        if (connectionStatus !== 'live' && prev >= 99) return 99;
+        const isConnected = connectionStatus === 'live' || connectionStatus === 'polling';
+        if (!isConnected && prev >= 99) return 99;
         const inc = Math.floor(Math.random() * 8) + 1; // Slower increment for better animation feel
         return Math.min(100, prev + inc); // We allow it to hit 100 if connected conditions are met below
       });
