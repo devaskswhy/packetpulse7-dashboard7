@@ -270,7 +270,7 @@ export default function DashboardPage() {
                                     {alert.reason || 'Security event detected'}
                                 </span>
                                 <span style={{ color: '#22d3ee', fontFamily: 'monospace', fontSize: '11px' }}>
-                                    {alert.ip || 'Unknown'}
+                                    {alert.src_ip || 'Unknown'}
                                 </span>
                                 <div style={{ color: getSeverityColor(alert.type), fontWeight: 'bold' }}>
                                     [{(alert.type || 'UNKNOWN').toUpperCase()}]

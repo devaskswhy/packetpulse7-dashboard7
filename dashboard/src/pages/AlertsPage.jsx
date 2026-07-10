@@ -351,7 +351,7 @@ export default function AlertsPage() {
 
                 return (
                   <motion.div
-                    key={`${alert.ts || index}-${alert.ip || index}`}
+                    key={`${alert.ts || index}-${alert.src_ip || index}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -100 }}
@@ -446,7 +446,7 @@ export default function AlertsPage() {
                     }}>
                       <span>
                         SRC: <span style={{ color: "#22d3ee", fontFamily: "monospace" }}>
-                          {alert.ip || "Unknown"}
+                          {alert.src_ip || "Unknown"}
                         </span>
                       </span>
                       {alert.dst_ip && (
