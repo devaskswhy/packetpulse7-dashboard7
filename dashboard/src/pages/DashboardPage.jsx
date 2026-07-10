@@ -14,6 +14,7 @@ import LiveTrafficChart from "../components/LiveTrafficChart";
 import AppPieChart from "../components/AppPieChart";
 import FlowsTable from "../components/FlowsTable";
 import ViewportFreezer from "../components/effects/ViewportFreezer";
+import AIBriefingCard from "../components/AIBriefingCard";
 import { API_BASE, API_KEY } from "../config";
 
 export default function DashboardPage() {
@@ -204,6 +205,9 @@ export default function DashboardPage() {
                     </ViewportFreezer>
                 </div>
             </div>
+
+            {/* AI Briefing Section */}
+            <AIBriefingCard />
 
             {/* TOP THREATS SUMMARY Section */}
             <div

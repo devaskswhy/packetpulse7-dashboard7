@@ -7,6 +7,7 @@ import NetworkBackground from "./components/effects/NetworkBackground";
 import AlertToast from "./components/effects/AlertToast";
 import Preloader from "./components/effects/Preloader";
 import MatrixIntro from "./components/effects/MatrixIntro";
+import AskAnalystChat from "./components/AskAnalystChat";
 import { useState, useEffect, useRef, useCallback } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -227,6 +228,7 @@ export default function App() {
         </section>
       </main>
 
+      <AskAnalystChat />
       <AlertToast />
     </div>
   );

@@ -17,13 +17,25 @@ import hashlib
 import random
 import time
 import uuid
-from collections import deque
+from collections import deque, defaultdict
 from datetime import datetime, timezone
+import os
+import json
+from groq import Groq
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="PacketPulse Demo API")
+
+# Groq Setup
+try:
+    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
+except Exception:
+    groq_client = None
+
+AI_CACHE = {"text": None, "ts": 0, "generated_at": ""}
+RATE_LIMITS = defaultdict(list)
 
 # Allow your Vercel frontend (and localhost for testing) to call this API.
 app.add_middleware(
@@ -260,6 +272,101 @@ async def get_rules():
 @app.post("/rules")
 async def update_rules(rules: dict):
     return {"status": "updated", "rules": rules}
+
+
+@app.get("/ai/briefing")
+async def get_ai_briefing():
+    now = time.time()
+    if AI_CACHE["text"] and (now - AI_CACHE["ts"] < 30):
+        return {"briefing": AI_CACHE["text"], "generated_at": AI_CACHE["generated_at"]}
+        
+    recent_alerts = list(ALERTS)[:10]
+    stats = current_stats()
+    
+    if not groq_client:
+        fallback = f"System operating normally. {len(recent_alerts)} recent alerts detected. Total traffic: {stats['total_bytes']} bytes."
+        AI_CACHE["text"] = fallback
+        AI_CACHE["ts"] = now
+        AI_CACHE["generated_at"] = now_iso()
+        return {"briefing": fallback, "generated_at": AI_CACHE["generated_at"]}
+        
+    prompt = f"""
+    Act as a SOC (Security Operations Center) analyst. Provide a 2-3 sentence plain-English threat briefing. 
+    Mention specific alert types, severity concentration, and any notable flow_id if one stands out. 
+    Tone: calm, professional, analyst-style, not alarmist.
+    
+    Context Data:
+    Stats: {json.dumps(stats)}
+    Recent Alerts: {json.dumps(recent_alerts)}
+    """
+    
+    try:
+        completion = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=150
+        )
+        briefing = completion.choices[0].message.content.strip()
+        AI_CACHE["text"] = briefing
+        AI_CACHE["ts"] = now
+        AI_CACHE["generated_at"] = now_iso()
+        return {"briefing": briefing, "generated_at": AI_CACHE["generated_at"]}
+    except Exception as e:
+        fallback = f"Rule-based summary: {len(recent_alerts)} recent alerts. Traffic volume at {stats['total_bytes']} bytes."
+        return {"briefing": fallback, "generated_at": now_iso()}
+
+@app.post("/ai/ask")
+async def post_ai_ask(request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    
+    # Simple rate limiting: 10 requests per minute
+    RATE_LIMITS[client_ip] = [ts for ts in RATE_LIMITS[client_ip] if now - ts < 60]
+    if len(RATE_LIMITS[client_ip]) >= 10:
+        return {"answer": "Rate limit exceeded. Please try again in a minute."}
+        
+    RATE_LIMITS[client_ip].append(now)
+    
+    try:
+        body = await request.json()
+        question = body.get("question", "")
+    except Exception:
+        question = ""
+    
+    recent_alerts = list(ALERTS)[:30]
+    recent_flows = list(FLOWS.values())[:20]
+    stats = current_stats()
+    
+    if not groq_client:
+        return {"answer": "I'm sorry, my AI backend is currently offline. Please check the GROQ_API_KEY."}
+        
+    system_prompt = """
+    You are a network security assistant. Answer questions ONLY using the provided flow/alert data.
+    If the data doesn't contain the answer, say so rather than making things up.
+    Keep answers concise and relevant to a SOC analyst.
+    """
+    
+    context = f"""
+    Context Data:
+    Stats: {json.dumps(stats)}
+    Recent Alerts: {json.dumps(recent_alerts)}
+    Recent Flows: {json.dumps(recent_flows)}
+    """
+    
+    try:
+        completion = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": context + "\\n\\nQuestion: " + question}
+            ],
+            temperature=0.3,
+            max_tokens=300
+        )
+        return {"answer": completion.choices[0].message.content.strip()}
+    except Exception as e:
+        return {"answer": "I'm currently experiencing a connection issue with my AI provider. Please try again later."}
 
 
 # ---------------------------------------------------------------------------
