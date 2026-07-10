@@ -12,6 +12,11 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  cursor: url('/cursor-default.svg') 6 4, auto;
+}
+
+a, button, [role="button"], input[type="submit"], input[type="button"], input[type="checkbox"], input[type="radio"], select, .cursor-pointer {
+  cursor: url('/cursor-pointer.svg') 14 2, pointer !important;
 }
 
 :root {

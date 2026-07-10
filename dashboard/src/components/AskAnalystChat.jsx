@@ -97,7 +97,7 @@ export default function AskAnalystChat() {
                         </div>
 
                         {/* Messages */}
-                        <div className="chat-scroll" style={{
+                        <div className="chat-scroll" data-lenis-prevent="true" style={{
                             flex: 1,
                             padding: '16px',
                             overflowY: 'auto',

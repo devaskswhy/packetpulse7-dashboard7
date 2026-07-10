@@ -2,7 +2,6 @@ import DashboardPage from "./pages/DashboardPage";
 import FlowsPage from "./pages/FlowsPage";
 import AlertsPage from "./pages/AlertsPage";
 import { useDPI } from "./context/DPIContext";
-import CyberCursor from "./components/effects/CyberCursor";
 import NetworkBackground from "./components/effects/NetworkBackground";
 import AlertToast from "./components/effects/AlertToast";
 import Preloader from "./components/effects/Preloader";
@@ -155,7 +154,6 @@ export default function App() {
       <div className="scroll-progress-bar" />
 
       <MatrixIntro />
-      <CyberCursor />
       <NetworkBackground />
 
       {/* ---- Fixed Top Navbar ---- */}

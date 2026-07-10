@@ -1,0 +1,22 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="galaxy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1b0033" />
+      <stop offset="40%" stop-color="#4a00e0" />
+      <stop offset="80%" stop-color="#8e2de2" />
+      <stop offset="100%" stop-color="#00ffff" />
+    </linearGradient>
+    <pattern id="stars" width="10" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.5" fill="white" opacity="0.8"/>
+      <circle cx="7" cy="8" r="0.7" fill="white" opacity="0.6"/>
+      <circle cx="8" cy="3" r="0.4" fill="white" opacity="0.9"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.6)"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <path d="M 6 4 L 22 18 L 15 18 L 19 26 L 16 27 L 12 19 L 6 25 Z" fill="url(#galaxy)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5" />
+    <path d="M 6 4 L 22 18 L 15 18 L 19 26 L 16 27 L 12 19 L 6 25 Z" fill="url(#stars)" pointer-events="none" />
+  </g>
+</svg>
