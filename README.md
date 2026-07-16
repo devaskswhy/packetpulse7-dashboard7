@@ -2,7 +2,7 @@
 
 ##  Live Demo
 
-**<a>View Live Dashboard</a>**
+**[View Live Dashboard](https://packetpulse-app.vercel.app/)**
 
 >  **Note:** This is hosted on a free-tier backend. On first load, please **wait 10 seconds and reload the page** to allow the database and services to fully connect.
 
