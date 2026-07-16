@@ -1,5 +1,24 @@
 # PacketPulse DPI System 🚀
 
+##  Live Demo
+
+**<a>View Live Dashboard</a>**
+
+>  **Note:** This is hosted on a free-tier backend. On first load, please **wait 10 seconds and reload the page** to allow the database and services to fully connect.
+
+## 📸 Screenshots
+
+| | |
+|---|---|
+| ![Live Traffic Overview — real-time packets/sec and bandwidth graphs](./dashboard.png) | ![Traffic by App + AI SOC Analyst Briefing](./dashboard2.png) |
+| *Live Traffic Overview — real-time packets/sec and bandwidth graphs* | *Traffic by App + AI SOC Analyst Briefing* |
+| ![Ask the Analyst — quick security event summary](./chat1.png) | ![Ask the Analyst — natural language flow lookup](./chat2.png) |
+| *Ask the Analyst — quick security event summary* | *Ask the Analyst — natural language flow lookup* |
+| ![Active Alerts — Threat Intelligence Feed](./active_alerts.png) | ![Active Alerts — filtered by severity, system secure state](./active_alerts2.png) |
+| *Active Alerts — Threat Intelligence Feed* | *Active Alerts — filtered by severity, system secure state* |
+| ![System Status + Recent Flows table](./recent_flows.png) | ![Live Flows — full network flow stream with block/allow status](./network_flows.png) |
+| *System Status + Recent Flows table* | *Live Flows — full network flow stream with block/allow status* |
+
 A production-grade, fully containerized, event-driven Deep Packet Inspection platform 
 with intelligent threat detection, persistent storage, and a real-time React dashboard — 
 deployable with a single command.
@@ -34,6 +53,7 @@ deployable with a single command.
 | Processing | Python 3.12 + confluent-kafka | Flow aggregation, 5-tuple tracking |
 | Detection | Python 3.12 + scikit-learn | Rule engine + ML anomaly detection |
 | ML / Detection | scikit-learn IsolationForest | Unsupervised anomaly detection, DDoS patterns |
+| AI Layer | Groq LLaMA 3.3 70B | Natural language threat briefing + conversational flow/alert Q&A |
 | API Gateway | FastAPI + slowapi + Redis auth | REST + WebSocket, pagination, rate limiting, API key auth |
 | Database | PostgreSQL 16 + SQLAlchemy 2.0 (async) + Alembic | Persistent flows, alerts, stats history |
 | Frontend | React + Vite + Recharts | Live dashboard |
@@ -346,6 +366,38 @@ curl -X POST http://localhost:8000/rules \
 curl http://localhost:8000/rules
 ```
 
+## 🤖 AI SOC Analyst
+
+PacketPulse includes an integrated LLM-powered chatbot, **Ask the Analyst**, built with the **Groq LLaMA API** to accelerate investigation and triage workflows.
+
+### AI Endpoints
+
+- `GET /ai/briefing` — Returns an auto-generated threat briefing summarizing recent alerts, severity patterns, and notable traffic behavior.
+- `POST /ai/ask` — Supports natural language Q&A over live flow and alert data (example: *"give a packet summary of Slack traffic"*).
+
+### Usage Example
+
+**Question**
+```text
+give a packet summary of Slack traffic
+```
+
+**Structured Response (example)**
+```json
+{
+  "flow_id": "a5f9d8c1...",
+  "src_ip": "10.0.1.14",
+  "dst_ip": "54.192.32.18",
+  "src_port": 52344,
+  "dst_port": 443,
+  "protocol": "TCP",
+  "bytes": 1843200,
+  "packets": 2490,
+  "duration_s": 42.7,
+  "blocked": false
+}
+```
+
 ## 📊 Current System Status
 
 - ✅ Phase 1: System Stabilized
@@ -358,6 +410,9 @@ curl http://localhost:8000/rules
 - ✅ Phase 8: Production-Grade API Gateway
 - ✅ Phase 9: Fully Dockerized (One-Command Setup)
 - ✅ Phase 10: Kubernetes Deployment (Production-Ready)
+- ✅ Phase 11: Cinematic Single-Scroll UI (GSAP + Lenis + ScrollTrigger)
+- ✅ Phase 12: AI SOC Analyst Integration (Groq LLaMA — briefing + conversational Q&A)
+- ✅ Phase 13: Free-Tier Production Deployment (Vercel + Render + Neon + Upstash)
 
 
 ## 🛠️ Development
